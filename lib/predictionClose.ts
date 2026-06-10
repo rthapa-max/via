@@ -52,6 +52,13 @@ export async function processPredictionWindowClosures(nowMs = Date.now()) {
   const due = (fixtures ?? []) as FixtureRow[];
   const results: { fixtureId: string; sent: boolean; reason?: string }[] = [];
 
+  console.log("[prediction-close] scan", {
+    now: new Date(nowMs).toISOString(),
+    cutoffIso,
+    candidateCount: due.length,
+    fixtureIds: due.map((f) => f.id),
+  });
+
   for (const fixture of due) {
     const kickoffMs = new Date(fixture.kickoff_at).getTime();
     const closesAt = kickoffMs - PREDICTION_CLOSES_BEFORE_MS;
@@ -91,6 +98,13 @@ export async function processPredictionWindowClosures(nowMs = Date.now()) {
     }
 
     try {
+      console.log("[prediction-close] emailing fixture", {
+        fixtureId: fixture.id,
+        match: `${fixture.home} vs ${fixture.away}`,
+        predictionCount: predRows.length,
+        closesAt: new Date(closesAt).toISOString(),
+      });
+
       await sendPredictionWindowClosedEmail({
         home: fixture.home,
         away: fixture.away,
@@ -108,8 +122,19 @@ export async function processPredictionWindowClosures(nowMs = Date.now()) {
           };
         }),
       });
+
+      console.log("[prediction-close] email ok", {
+        fixtureId: fixture.id,
+        match: `${fixture.home} vs ${fixture.away}`,
+      });
     } catch (emailErr) {
       const message = emailErr instanceof Error ? emailErr.message : "Failed to send email";
+      console.error("[prediction-close] email failed", {
+        fixtureId: fixture.id,
+        match: `${fixture.home} vs ${fixture.away}`,
+        message,
+        error: emailErr,
+      });
       results.push({ fixtureId: fixture.id, sent: false, reason: message });
       continue;
     }

@@ -125,22 +125,45 @@ export async function sendPredictionWindowClosedEmail(
   const to = getPredictionNotifyEmails();
 
   if (!apiKey || !from) {
-    console.warn("[resend] Skipping email: RESEND_API_KEY or RESEND_FROM_EMAIL not set");
+    console.warn("[resend] prediction-close skipped — missing config", {
+      hasApiKey: Boolean(apiKey),
+      hasFrom: Boolean(from),
+      to,
+    });
     return;
   }
 
   const prefix = options?.demo ? "[DEMO] " : "";
-  const resend = new Resend(apiKey);
-  const { error } = await resend.emails.send({
+  const subject = `${prefix}WC26 predictions closed: ${payload.home} vs ${payload.away} (${payload.predictions.length})`;
+  const logContext = {
+    demo: Boolean(options?.demo),
     from,
     to,
-    subject: `${prefix}WC26 predictions closed: ${payload.home} vs ${payload.away} (${payload.predictions.length})`,
+    subject,
+    match: `${payload.home} vs ${payload.away}`,
+    predictionCount: payload.predictions.length,
+    closedAt: payload.closedAt,
+  };
+
+  console.log("[resend] prediction-close sending", logContext);
+
+  const resend = new Resend(apiKey);
+  const { data, error } = await resend.emails.send({
+    from,
+    to,
+    subject,
     html: buildPredictionWindowClosedHtml(payload),
   });
 
   if (error) {
+    console.error("[resend] prediction-close failed", { ...logContext, error });
     throw new Error(error.message);
   }
+
+  console.log("[resend] prediction-close sent", {
+    ...logContext,
+    resendId: data?.id ?? null,
+  });
 }
 
 export async function sendPredictionCompleteEmail(payload: PredictionEmailPayload) {
@@ -149,19 +172,40 @@ export async function sendPredictionCompleteEmail(payload: PredictionEmailPayloa
   const to = getPredictionNotifyEmails();
 
   if (!apiKey || !from) {
-    console.warn("[resend] Skipping email: RESEND_API_KEY or RESEND_FROM_EMAIL not set");
+    console.warn("[resend] prediction saved skipped — missing config", {
+      hasApiKey: Boolean(apiKey),
+      hasFrom: Boolean(from),
+      to,
+    });
     return;
   }
 
-  const resend = new Resend(apiKey);
-  const { error } = await resend.emails.send({
+  const subject = `WC26 prediction: ${payload.home} ${payload.homeScore}-${payload.awayScore} ${payload.away}`;
+  const logContext = {
     from,
     to,
-    subject: `WC26 prediction: ${payload.home} ${payload.homeScore}-${payload.awayScore} ${payload.away}`,
+    subject,
+    userDisplay: payload.userDisplay,
+    match: `${payload.home} vs ${payload.away}`,
+  };
+
+  console.log("[resend] prediction saved sending", logContext);
+
+  const resend = new Resend(apiKey);
+  const { data, error } = await resend.emails.send({
+    from,
+    to,
+    subject,
     html: buildPredictionEmailHtml(payload),
   });
 
   if (error) {
+    console.error("[resend] prediction saved failed", { ...logContext, error });
     throw new Error(error.message);
   }
+
+  console.log("[resend] prediction saved sent", {
+    ...logContext,
+    resendId: data?.id ?? null,
+  });
 }

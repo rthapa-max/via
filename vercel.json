@@ -1,8 +1,0 @@
-{
-  "crons": [
-    {
-      "path": "/api/cron/prediction-close",
-      "schedule": "* * * * *"
-    }
-  ]
-}

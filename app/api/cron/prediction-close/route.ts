@@ -1,6 +1,4 @@
 import { NextResponse } from "next/server";
-import { processPredictionWindowClosures } from "@/lib/predictionClose";
-import { sendDemoPredictionWindowClosedEmail } from "@/lib/resend";
 
 function authorizeCron(req: Request) {
   const url = new URL(req.url);
@@ -16,28 +14,28 @@ function authorizeCron(req: Request) {
 }
 
 export async function GET(req: Request) {
+  const url = new URL(req.url);
+  const at = new Date().toISOString();
+
   if (!authorizeCron(req)) {
+    console.log("[cron/prediction-close]", { at, ok: false, reason: "unauthorized", path: url.pathname });
     return NextResponse.json({ ok: false, message: "Unauthorized" }, { status: 401 });
   }
 
-  const url = new URL(req.url);
-  if (url.searchParams.get("demo") === "1") {
-    try {
-      const sentTo = await sendDemoPredictionWindowClosedEmail();
-      return NextResponse.json({ ok: true, demo: true, sentTo });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Demo email failed";
-      console.error("[cron/prediction-close] demo", error);
-      return NextResponse.json({ ok: false, message }, { status: 500 });
-    }
-  }
+  console.log("[cron/prediction-close]", {
+    at,
+    ok: true,
+    path: url.pathname,
+    query: Object.fromEntries(url.searchParams),
+    userAgent: req.headers.get("user-agent"),
+    // Email disabled for now — debug only.
+    emailSent: false,
+  });
 
-  try {
-    const result = await processPredictionWindowClosures();
-    return NextResponse.json({ ok: true, ...result });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Cron failed";
-    console.error("[cron/prediction-close]", error);
-    return NextResponse.json({ ok: false, message }, { status: 500 });
-  }
+  return NextResponse.json({
+    ok: true,
+    debug: true,
+    message: "Cron hit logged; no email sent.",
+    at,
+  });
 }

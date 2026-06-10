@@ -3,7 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FixtureMatch } from "@/lib/fixtures";
 import { flagUrlForTeam } from "@/lib/fixtures";
-import { getPredictionWindowState, kickoffMsFromFixtureRow } from "@/lib/kickoff";
+import {
+  formatKickoffLocal,
+  getPredictionWindowState,
+  kickoffMsFromFixtureRow,
+} from "@/lib/kickoff";
 import { useAuth } from "@/app/components/AuthProvider";
 
 type WinnerPick = "home" | "away" | "draw";
@@ -171,6 +175,10 @@ export function FixtureCard({ match }: { match: FixtureMatch }) {
     [kickoffMs, nowMs],
   );
 
+  const kickoffTimeLabel = useMemo(() => {
+    return formatKickoffLocal(kickoffMs) ?? match.time;
+  }, [kickoffMs, match.time]);
+
   async function save() {
     if (!user || !isPending || !predictionWindow.open) return;
     const hs = homeScore === "" ? 0 : Number(homeScore);
@@ -306,7 +314,12 @@ export function FixtureCard({ match }: { match: FixtureMatch }) {
             >
               {fixtureStatus}
             </span>
-            <span className="font-normal text-primary-text">{match.time}</span>
+            <span
+              className="font-normal text-primary-text"
+              title={`${match.dateLabel} ${match.time} (Nepal time)`}
+            >
+              {kickoffTimeLabel}
+            </span>
             {match.stage ? <span>{match.stage}</span> : null}
             {match.group ? <span>{match.group}</span> : null}
           </div>

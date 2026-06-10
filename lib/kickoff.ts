@@ -26,6 +26,20 @@ export function kickoffMsFromFixtureRow(fixture: KickoffFixtureInput): number | 
   return kickoffMsFromFixture({ dateLabel, time: fixture.time });
 }
 
+/** Format kickoff instant in the viewer's local timezone (browser locale). */
+export function formatKickoffLocal(kickoffMs: number | null) {
+  if (kickoffMs === null || !Number.isFinite(kickoffMs)) return null;
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
+    }).format(new Date(kickoffMs));
+  } catch {
+    return null;
+  }
+}
+
 export {
   PREDICTION_CLOSES_BEFORE_MS,
   PREDICTION_OPENS_BEFORE_MS,

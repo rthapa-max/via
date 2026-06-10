@@ -10,6 +10,7 @@ type FixtureRow = {
   time: string;
   city: string | null;
   kickoff_at: string;
+  status: string;
 };
 
 type PredictionRow = {
@@ -36,34 +37,58 @@ function winnerLabel(home: string, away: string, winner: PredictionRow["winner"]
   return away;
 }
 
+/**
+ * Hourly cron: for each upcoming match whose prediction window has closed
+ * (1 hour before Nepal-time kickoff) and we have not emailed yet, send all
+ * user predictions to the notify list.
+ */
 export async function processPredictionWindowClosures(nowMs = Date.now()) {
   const supabase = getSupabaseServerClient();
-  const cutoffIso = new Date(nowMs + PREDICTION_CLOSES_BEFORE_MS).toISOString();
+  const nowIso = new Date(nowMs).toISOString();
 
   const { data: fixtures, error: fixturesErr } = await supabase
     .from("fixtures")
-    .select("id,home,away,date_label,time,city,kickoff_at")
+    .select("id,home,away,date_label,time,city,kickoff_at,status")
     .is("prediction_close_notified_at", null)
     .not("kickoff_at", "is", null)
-    .lte("kickoff_at", cutoffIso);
+    .gt("kickoff_at", nowIso)
+    .in("status", ["scheduled", "pending"]);
 
   if (fixturesErr) throw new Error(fixturesErr.message);
 
-  const due = (fixtures ?? []) as FixtureRow[];
-  const results: { fixtureId: string; sent: boolean; reason?: string }[] = [];
+  const candidates = (fixtures ?? []) as FixtureRow[];
+  const results: {
+    fixtureId: string;
+    sent: boolean;
+    reason?: string;
+    predictionCount?: number;
+  }[] = [];
 
   console.log("[prediction-close] scan", {
-    now: new Date(nowMs).toISOString(),
-    cutoffIso,
-    candidateCount: due.length,
-    fixtureIds: due.map((f) => f.id),
+    now: nowIso,
+    candidateCount: candidates.length,
+    fixtureIds: candidates.map((f) => f.id),
   });
 
-  for (const fixture of due) {
+  for (const fixture of candidates) {
     const kickoffMs = new Date(fixture.kickoff_at).getTime();
     const closesAt = kickoffMs - PREDICTION_CLOSES_BEFORE_MS;
+
     if (nowMs < closesAt) {
-      results.push({ fixtureId: fixture.id, sent: false, reason: "window still open" });
+      results.push({
+        fixtureId: fixture.id,
+        sent: false,
+        reason: "prediction window still open",
+      });
+      continue;
+    }
+
+    if (nowMs >= kickoffMs) {
+      results.push({
+        fixtureId: fixture.id,
+        sent: false,
+        reason: "match already started",
+      });
       continue;
     }
 
@@ -101,8 +126,9 @@ export async function processPredictionWindowClosures(nowMs = Date.now()) {
       console.log("[prediction-close] emailing fixture", {
         fixtureId: fixture.id,
         match: `${fixture.home} vs ${fixture.away}`,
-        predictionCount: predRows.length,
+        kickoffAt: fixture.kickoff_at,
         closesAt: new Date(closesAt).toISOString(),
+        predictionCount: predRows.length,
       });
 
       await sendPredictionWindowClosedEmail({
@@ -126,6 +152,7 @@ export async function processPredictionWindowClosures(nowMs = Date.now()) {
       console.log("[prediction-close] email ok", {
         fixtureId: fixture.id,
         match: `${fixture.home} vs ${fixture.away}`,
+        predictionCount: predRows.length,
       });
     } catch (emailErr) {
       const message = emailErr instanceof Error ? emailErr.message : "Failed to send email";
@@ -150,12 +177,17 @@ export async function processPredictionWindowClosures(nowMs = Date.now()) {
       continue;
     }
 
-    results.push({ fixtureId: fixture.id, sent: true });
+    results.push({
+      fixtureId: fixture.id,
+      sent: true,
+      predictionCount: predRows.length,
+    });
   }
 
   return {
-    checked: due.length,
+    checked: candidates.length,
     sent: results.filter((r) => r.sent).length,
+    skipped: results.filter((r) => !r.sent).length,
     results,
   };
 }

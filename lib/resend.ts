@@ -95,32 +95,7 @@ export function getPredictionNotifyEmails() {
   return [...PREDICTION_NOTIFY_EMAILS];
 }
 
-/** Sample closure email for testing Resend + template. */
-export async function sendDemoPredictionWindowClosedEmail() {
-  const to = getPredictionNotifyEmails();
-  await sendPredictionWindowClosedEmail(
-    {
-      home: "Mexico",
-      away: "South Africa",
-      dateLabel: "Friday 12 June 2026",
-      time: "00:45",
-      city: "Mexico City",
-      closedAt: new Date().toISOString(),
-      predictions: [
-        { userDisplay: "@rupak", homeScore: 2, awayScore: 1, winner: "Mexico" },
-        { userDisplay: "@dev_user", homeScore: 1, awayScore: 1, winner: "Draw" },
-        { userDisplay: "player@example.com", homeScore: 0, awayScore: 2, winner: "South Africa" },
-      ],
-    },
-    { demo: true },
-  );
-  return to;
-}
-
-export async function sendPredictionWindowClosedEmail(
-  payload: PredictionWindowClosedPayload,
-  options?: { demo?: boolean },
-) {
+export async function sendPredictionWindowClosedEmail(payload: PredictionWindowClosedPayload) {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.RESEND_FROM_EMAIL;
   const to = getPredictionNotifyEmails();
@@ -134,10 +109,8 @@ export async function sendPredictionWindowClosedEmail(
     return;
   }
 
-  const prefix = options?.demo ? "[DEMO] " : "";
-  const subject = `${prefix}WC26 predictions closed: ${payload.home} vs ${payload.away} (${payload.predictions.length})`;
+  const subject = `WC26 predictions closed: ${payload.home} vs ${payload.away} (${payload.predictions.length})`;
   const logContext = {
-    demo: Boolean(options?.demo),
     from,
     to,
     subject,

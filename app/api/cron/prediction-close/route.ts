@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getPredictionNotifyEmails, sendDemoPredictionWindowClosedEmail } from "@/lib/resend";
+import { processPredictionWindowClosures } from "@/lib/predictionClose";
+import { getPredictionNotifyEmails } from "@/lib/resend";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -11,12 +12,11 @@ export async function GET(req: Request) {
     query: Object.fromEntries(url.searchParams),
     userAgent: req.headers.get("user-agent"),
     notifyEmails: getPredictionNotifyEmails(),
-    fakeData: true,
   });
 
   try {
-    const sentTo = await sendDemoPredictionWindowClosedEmail();
-    const response = { ok: true, at, fakeData: true, sentTo, emailsSent: 1 };
+    const result = await processPredictionWindowClosures();
+    const response = { ok: true, at, ...result };
     console.log("[cron/prediction-close] done", response);
     return NextResponse.json(response);
   } catch (error) {

@@ -65,6 +65,9 @@ alter table public.fixtures
   add column if not exists kickoff_at timestamptz;
 
 alter table public.fixtures
+  add column if not exists prediction_close_notified_at timestamptz;
+
+alter table public.fixtures
   add column if not exists status text not null default 'scheduled';
 
 alter table public.fixtures

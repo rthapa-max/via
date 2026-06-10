@@ -98,7 +98,7 @@ export async function PUT(req: Request) {
 
   const { data: fixture, error: fixtureErr } = await supabase
     .from("fixtures")
-    .select("status,date_label,time,city,kickoff_at")
+    .select("status,date_label,time,city,kickoff_at,home,away")
     .eq("id", fixtureId)
     .maybeSingle();
 

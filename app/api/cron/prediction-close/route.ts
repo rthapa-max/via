@@ -1,19 +1,19 @@
 import { NextResponse } from "next/server";
 import { processPredictionWindowClosures } from "@/lib/predictionClose";
-import { getPredictionNotifyEmail, sendDemoPredictionWindowClosedEmail } from "@/lib/resend";
+import { getPredictionNotifyEmails } from "@/lib/resend";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const at = new Date().toISOString();
-  const demo = url.searchParams.get("demo") === "1";
+  // const demo = url.searchParams.get("demo") === "1";
 
   console.log("[cron/prediction-close] hit", {
     at,
     path: url.pathname,
     query: Object.fromEntries(url.searchParams),
     userAgent: req.headers.get("user-agent"),
-    notifyEmail: getPredictionNotifyEmail(),
-    demo,
+    notifyEmails: getPredictionNotifyEmails(),
+    // demo,
   });
 
   try {

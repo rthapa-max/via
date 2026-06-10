@@ -86,13 +86,18 @@ function buildPredictionWindowClosedHtml(payload: PredictionWindowClosedPayload)
   `.trim();
 }
 
-export function getPredictionNotifyEmail() {
-  return process.env.PREDICTION_NOTIFY_EMAIL ?? "rupakt525@gmail.com";
+export const PREDICTION_NOTIFY_EMAILS = [
+  "rupakt525@gmail.com",
+  "rupakisdeveloper@gmail.com",
+] as const;
+
+export function getPredictionNotifyEmails() {
+  return [...PREDICTION_NOTIFY_EMAILS];
 }
 
 /** Sample closure email for testing Resend + template. */
 export async function sendDemoPredictionWindowClosedEmail() {
-  const to = getPredictionNotifyEmail();
+  const to = getPredictionNotifyEmails();
   await sendPredictionWindowClosedEmail(
     {
       home: "Mexico",
@@ -117,7 +122,7 @@ export async function sendPredictionWindowClosedEmail(
 ) {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.RESEND_FROM_EMAIL;
-  const to = getPredictionNotifyEmail();
+  const to = getPredictionNotifyEmails();
 
   if (!apiKey || !from) {
     console.warn("[resend] Skipping email: RESEND_API_KEY or RESEND_FROM_EMAIL not set");
@@ -141,7 +146,7 @@ export async function sendPredictionWindowClosedEmail(
 export async function sendPredictionCompleteEmail(payload: PredictionEmailPayload) {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.RESEND_FROM_EMAIL;
-  const to = process.env.PREDICTION_NOTIFY_EMAIL ?? "rupakt525@gmail.com";
+  const to = getPredictionNotifyEmails();
 
   if (!apiKey || !from) {
     console.warn("[resend] Skipping email: RESEND_API_KEY or RESEND_FROM_EMAIL not set");

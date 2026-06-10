@@ -17,12 +17,6 @@ export async function GET(req: Request) {
   });
 
   try {
-    if (demo) {
-      const sentTo = await sendDemoPredictionWindowClosedEmail();
-      const response = { ok: true, at, demo: true, sentTo, emailsSent: 1 };
-      console.log("[cron/prediction-close] demo email sent", response);
-      return NextResponse.json(response);
-    }
 
     const result = await processPredictionWindowClosures();
     const response = { ok: true, at, ...result };

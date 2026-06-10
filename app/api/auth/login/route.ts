@@ -50,6 +50,10 @@ export async function POST(req: Request) {
     userId = existing.id;
   }
 
+  if (!userId) {
+    return NextResponse.json({ ok: false, message: "Failed to sign in." }, { status: 500 });
+  }
+
   const token = await signSession({ id: userId, email });
   (await cookies()).set({
     name: getSessionCookieName(),

@@ -167,7 +167,7 @@ join public.fixtures f on f.id = p.fixture_id;
 create view public.leaderboard as
 select
   u.email,
-  count(*) as predicted,
+  count(pp.fixture_id) as predicted,
   count(*) filter (where pp.fixture_status = 'finished' and pp.points = 3) as correct,
   count(*) filter (where pp.fixture_status = 'finished' and pp.points = 0) as incorrect,
   count(*) filter (where pp.fixture_status = 'finished' and pp.predicted_winner = 'draw') as draw,

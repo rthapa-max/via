@@ -124,7 +124,20 @@ export function FixtureCard({ match }: { match: FixtureMatch }) {
         | { ok: false; message: string }
         | null;
 
-      if (!res || !json || !json.ok || !json.prediction) return;
+      if (!res || !json || !json.ok) return;
+
+      if (!json.prediction) {
+        setPrediction(null);
+        setHomeScore("");
+        setAwayScore("");
+        try {
+          localStorage.removeItem(predictionKey(matchKey));
+        } catch {
+          // ignore
+        }
+        return;
+      }
+
       const data = json.prediction;
       const next: Prediction = {
         winner:
@@ -141,7 +154,7 @@ export function FixtureCard({ match }: { match: FixtureMatch }) {
     }
 
     void loadFromDb();
-  }, [fixtureId, user]);
+  }, [fixtureId, user, matchKey]);
 
   useEffect(() => {
     if (!user) {

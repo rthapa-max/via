@@ -1,49 +1,31 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { flagUrlForTeam } from "@/lib/fixtures";
 
 type LeaderRow = {
   email: string;
-  predicted: number;
-  correct: number;
-  incorrect: number;
-  draw: number;
+  favorite_team?: string | null;
   points?: number;
 };
 
-function LeaderboardCard({ row, rank }: { row: LeaderRow; rank: number }) {
-  const shortEmail = row.email.split("@")[0] ?? row.email;
-
+function PlayerFlag({ team }: { team: string }) {
+  const flagUrl = flagUrlForTeam(team, 40);
+  if (!flagUrl) return null;
   return (
-    <div className="rounded-xl border border-zinc-200 bg-zinc-50/80 px-3 py-3 dark:border-white/10 dark:bg-white/5">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-[11px] tabular-nums text-zinc-600 ring-1 ring-zinc-200 dark:bg-zinc-900 dark:text-zinc-300 dark:ring-white/10">
-            {rank}
-          </span>
-          <span className="truncate text-sm text-zinc-900 dark:text-zinc-50" title={row.email}>
-            {shortEmail}
-          </span>
-        </div>
-        <span className="shrink-0 text-sm font-medium tabular-nums text-zinc-900 dark:text-zinc-50">
-          {row.points ?? 0} pts
-        </span>
-      </div>
-      <dl className="mt-2.5 grid grid-cols-4 gap-1 text-center">
-        {[
-          ["Pred", row.predicted ?? 0],
-          ["Hit", row.correct],
-          ["Miss", row.incorrect],
-          ["Draw", row.draw],
-        ].map(([label, value]) => (
-          <div key={label} className="rounded-lg bg-white px-1 py-1.5 dark:bg-zinc-950">
-            <dt className="text-[10px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{label}</dt>
-            <dd className="mt-0.5 text-xs font-medium tabular-nums text-zinc-800 dark:text-zinc-200">{value}</dd>
-          </div>
-        ))}
-      </dl>
-    </div>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={flagUrl}
+      alt=""
+      width={18}
+      height={14}
+      className="h-3.5 w-[1.125rem] shrink-0 rounded-[2px] object-cover ring-1 ring-secondary-border"
+    />
   );
+}
+
+function displayName(email: string) {
+  return email.split("@")[0] ?? email;
 }
 
 export function LeaderboardTable() {
@@ -76,60 +58,49 @@ export function LeaderboardTable() {
   }, []);
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-white/10 dark:bg-zinc-950">
-      <div className="flex items-center justify-between gap-3 border-b border-zinc-200 px-4 py-3 dark:border-white/10">
-        <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-50">Leaderboard</h2>
-        <span className="text-xs text-zinc-500 dark:text-zinc-400">
+    <section className="overflow-hidden rounded-2xl border border-secondary-border bg-background shadow-sm">
+      <div className="flex items-center justify-between gap-3 border-b border-secondary-border px-5 py-4 sm:px-6">
+        <h2 className="font-semibold text-base text-primary-text">Leaderboard</h2>
+        <span className="text-sm text-secondary-text">
           {loading ? "Loading…" : `${rows.length} player${rows.length === 1 ? "" : "s"}`}
         </span>
       </div>
 
-      <div className="p-3 sm:p-4">
+      <div className="p-5 sm:p-6">
         {loading ? (
-          <div className="py-6 text-center text-sm text-zinc-500 dark:text-zinc-400">Loading leaderboard…</div>
+          <div className="py-10 text-center text-sm text-secondary-text">Loading leaderboard…</div>
         ) : rows.length === 0 ? (
-          <div className="py-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
-            No scores yet. Make predictions and wait for results.
+          <div className="py-10 text-center text-sm text-secondary-text">
+            No players yet. Sign in to appear on the leaderboard.
           </div>
         ) : (
-          <>
-            <div className="space-y-2 md:hidden">
-              {rows.map((r, i) => (
-                <LeaderboardCard key={r.email} row={r} rank={i + 1} />
-              ))}
-            </div>
-
-            <div className="hidden overflow-x-auto md:block">
-              <table className="w-full min-w-[32rem] text-left text-xs">
-                <thead className="text-zinc-500 dark:text-zinc-400">
-                  <tr>
-                    <th className="pb-2 pr-3 font-normal">#</th>
-                    <th className="pb-2 pr-3 font-normal">Player</th>
-                    <th className="pb-2 pr-3 font-normal">Pts</th>
-                    <th className="pb-2 pr-3 font-normal">Pred</th>
-                    <th className="pb-2 pr-3 font-normal">Hit</th>
-                    <th className="pb-2 pr-3 font-normal">Miss</th>
-                    <th className="pb-2 font-normal">Draw</th>
+          <div className="overflow-x-auto">
+            <table className="table-striped table-borderless w-full text-left text-sm">
+              <thead className="text-xs text-secondary-text">
+                <tr>
+                  <th className="pb-3 pl-4 pr-4 font-normal sm:pl-6">#</th>
+                  <th className="pb-3 pr-4 font-normal">Player</th>
+                  <th className="pb-3 pl-4 pr-4 text-right font-normal sm:pr-6">Points</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-secondary-75 text-primary-text">
+                {rows.map((row, index) => (
+                  <tr key={row.email} className="hover:bg-secondary-50">
+                    <td className="py-3.5 pl-4 pr-4 tabular-nums text-gray-400 sm:pl-6">{index + 1}</td>
+                    <td className="max-w-[14rem] py-3.5 pr-4" title={row.email}>
+                      <span className="inline-flex min-w-0 items-center gap-2.5">
+                        <span className="truncate">{displayName(row.email)}</span>
+                        {row.favorite_team ? <PlayerFlag team={row.favorite_team} /> : null}
+                      </span>
+                    </td>
+                    <td className="py-3.5 pl-4 pr-4 text-right font-semibold tabular-nums text-primary-text sm:pr-6">
+                      {row.points ?? 0}
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-100 text-zinc-800 dark:divide-white/10 dark:text-zinc-200">
-                  {rows.map((r, i) => (
-                    <tr key={r.email} className="hover:bg-zinc-50/80 dark:hover:bg-white/5">
-                      <td className="py-2.5 pr-3 tabular-nums text-zinc-500">{i + 1}</td>
-                      <td className="max-w-[12rem] truncate py-2.5 pr-3" title={r.email}>
-                        {r.email}
-                      </td>
-                      <td className="py-2.5 pr-3 font-medium tabular-nums">{r.points ?? 0}</td>
-                      <td className="py-2.5 pr-3 tabular-nums">{r.predicted ?? 0}</td>
-                      <td className="py-2.5 pr-3 tabular-nums">{r.correct}</td>
-                      <td className="py-2.5 pr-3 tabular-nums">{r.incorrect}</td>
-                      <td className="py-2.5 tabular-nums">{r.draw}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </section>

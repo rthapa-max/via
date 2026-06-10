@@ -1,8 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { FixtureCard } from "@/app/components/FixtureCard";
-import { compareByDateAndTime, dateLabelToSortValue, type FixtureMatch } from "@/lib/fixtures";
+import {
+  compareByDateAndTime,
+  formatDateTabLabel,
+  pickDefaultFixtureDate,
+  type FixtureMatch,
+} from "@/lib/fixtures";
 
 type FixtureRow = {
   id: string;
@@ -37,72 +42,141 @@ function toMatch(r: FixtureRow): FixtureMatch {
 }
 
 export function FixturesFromSupabase() {
+  const [dates, setDates] = useState<string[]>([]);
+  const [activeDate, setActiveDate] = useState<string | null>(null);
   const [rows, setRows] = useState<FixtureRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingDates, setLoadingDates] = useState(true);
+  const [loadingFixtures, setLoadingFixtures] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  const loadFixtures = useCallback(async (dateLabel: string) => {
+    setLoadingFixtures(true);
+    setError(null);
+
+    const res = await fetch(`/api/fixtures?date=${encodeURIComponent(dateLabel)}`, {
+      cache: "no-store",
+    }).catch(() => null);
+    const json = (await res?.json().catch(() => null)) as
+      | { ok: true; fixtures: FixtureRow[] }
+      | { ok: false; message: string }
+      | null;
+
+    if (!res || !json || !json.ok) {
+      setRows([]);
+      setError(json && !json.ok ? json.message : "Could not load fixtures.");
+      setLoadingFixtures(false);
+      return;
+    }
+
+    setRows([...(json.fixtures ?? [])].sort(compareByDateAndTime));
+    setLoadingFixtures(false);
+  }, []);
 
   useEffect(() => {
-    async function load() {
-      setLoading(true);
-      const res = await fetch("/api/fixtures", { cache: "no-store" }).catch(() => null);
+    async function loadDates() {
+      setLoadingDates(true);
+      setError(null);
+
+      const res = await fetch("/api/fixtures?dates=1", { cache: "no-store" }).catch(() => null);
       const json = (await res?.json().catch(() => null)) as
-        | { ok: true; fixtures: FixtureRow[] }
+        | { ok: true; dates: string[] }
         | { ok: false; message: string }
         | null;
 
       if (!res || !json || !json.ok) {
-        setRows([]);
-        setLoading(false);
+        setDates([]);
+        setError(json && !json.ok ? json.message : "Could not load fixture dates.");
+        setLoadingDates(false);
         return;
       }
 
-      setRows(json.fixtures ?? []);
-      setLoading(false);
+      const nextDates = json.dates ?? [];
+      setDates(nextDates);
+      setActiveDate(pickDefaultFixtureDate(nextDates));
+      setLoadingDates(false);
     }
 
-    void load();
+    void loadDates();
   }, []);
 
-  const byDate = useMemo(() => {
-    const map: Record<string, FixtureRow[]> = {};
-    for (const r of rows) {
-      (map[r.date_label] ??= []).push(r);
-    }
-    for (const key of Object.keys(map)) {
-      map[key].sort(compareByDateAndTime);
-    }
-    return map;
-  }, [rows]);
+  useEffect(() => {
+    if (!activeDate) return;
+    void loadFixtures(activeDate);
+  }, [activeDate, loadFixtures]);
 
-  const sortedDateLabels = useMemo(() => {
-    return Object.keys(byDate).sort((a, b) => dateLabelToSortValue(a) - dateLabelToSortValue(b));
-  }, [byDate]);
+  useEffect(() => {
+    if (!activeDate) return;
+    const tab = tabRefs.current[activeDate];
+    tab?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+  }, [activeDate, dates]);
 
-  if (loading) {
-    return <div className="text-sm text-zinc-600 dark:text-zinc-400">Loading fixtures…</div>;
+  if (loadingDates) {
+    return <div className="py-4 text-sm text-secondary-text">Loading fixture dates…</div>;
   }
 
-  if (rows.length === 0) {
+  if (dates.length === 0) {
     return (
-      <div className="text-sm text-zinc-600 dark:text-zinc-400">
+      <div className="py-4 text-sm text-secondary-text">
         No fixtures found. Seed Supabase fixtures first.
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      {sortedDateLabels.map((dateLabel) => (
-        <section key={dateLabel} className="space-y-4">
-          <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{dateLabel}</h2>
+    <div className="space-y-6">
+      <div className="overflow-x-auto px-1 py-1.5 [scrollbar-width:thin]">
+        <div
+          role="tablist"
+          aria-label="Fixture dates"
+          className="flex w-max min-w-full gap-2 py-0.5"
+        >
+          {dates.map((dateLabel) => {
+            const selected = dateLabel === activeDate;
+            return (
+              <button
+                key={dateLabel}
+                ref={(el) => {
+                  tabRefs.current[dateLabel] = el;
+                }}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                onClick={() => setActiveDate(dateLabel)}
+                className={`shrink-0 rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+                  selected
+                    ? "border-primary-600 bg-primary-600 text-primary-foreground"
+                    : "border-secondary-border bg-background text-secondary-text hover:bg-secondary-50"
+                }`}
+              >
+                {formatDateTabLabel(dateLabel)}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
-          <div className="grid gap-3">
-            {byDate[dateLabel].map((r) => (
-              <FixtureCard key={r.id} match={toMatch(r)} />
-            ))}
-          </div>
-        </section>
-      ))}
+      {error ? (
+        <div className="rounded-xl border border-danger-200 bg-danger-50 px-4 py-3 text-sm text-danger-600">
+          {error}
+        </div>
+      ) : null}
+
+      {loadingFixtures ? (
+        <div className="py-12 text-center text-sm text-secondary-text">
+          Loading fixtures…
+        </div>
+      ) : rows.length === 0 ? (
+        <div className="py-12 text-center text-sm text-secondary-text">
+          No fixtures on this date.
+        </div>
+      ) : (
+        <div className="grid gap-5">
+          {rows.map((row) => (
+            <FixtureCard key={row.id} match={toMatch(row)} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
-

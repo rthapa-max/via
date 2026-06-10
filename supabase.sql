@@ -15,6 +15,9 @@ create table if not exists public.app_users (
 alter table public.app_users
   add column if not exists is_admin boolean not null default false;
 
+alter table public.app_users
+  add column if not exists favorite_team text;
+
 create table if not exists public.fixtures (
   id text primary key,
   date_label text not null,
@@ -135,8 +138,9 @@ alter table public.predictions drop column if exists match_key;
 
 -- Points:
 --   exact score (draw or not) = 3
---   correct outcome, wrong score = 1
---   else 0
+--   correct outcome, wrong score = 2
+--   predicted but wrong outcome = 1
+--   no prediction = 0 (no row in predictions)
 -- Drop dependent view first (CREATE OR REPLACE cannot rename columns).
 drop view if exists public.leaderboard;
 drop view if exists public.prediction_points;
@@ -158,8 +162,8 @@ select
       (f.result_home_score > f.result_away_score and p.winner = 'home') or
       (f.result_home_score < f.result_away_score and p.winner = 'away') or
       (f.result_home_score = f.result_away_score and p.winner = 'draw')
-    ) then 1
-    else 0
+    ) then 2
+    else 1
   end as points
 from public.predictions p
 join public.fixtures f on f.id = p.fixture_id;
@@ -167,13 +171,14 @@ join public.fixtures f on f.id = p.fixture_id;
 create view public.leaderboard as
 select
   u.email,
+  u.favorite_team,
   count(pp.fixture_id) as predicted,
   count(*) filter (where pp.fixture_status = 'finished' and pp.points = 3) as correct,
-  count(*) filter (where pp.fixture_status = 'finished' and pp.points = 0) as incorrect,
+  count(*) filter (where pp.fixture_status = 'finished' and pp.points = 1) as incorrect,
   count(*) filter (where pp.fixture_status = 'finished' and pp.predicted_winner = 'draw') as draw,
   coalesce(sum(pp.points), 0) as points
 from public.app_users u
 left join public.prediction_points pp on pp.user_id = u.id
-group by u.email
+group by u.email, u.favorite_team
 order by points desc, correct desc, predicted desc, u.email asc;
 

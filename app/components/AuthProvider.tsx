@@ -2,11 +2,19 @@
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
+type AppUser = {
+  id: string;
+  email: string;
+  isAdmin?: boolean;
+  favoriteTeam?: string | null;
+};
+
 type AuthContextValue = {
-  user: { id: string; email: string; isAdmin?: boolean } | null;
+  user: AppUser | null;
   ready: boolean;
   login(email: string, password: string): Promise<{ ok: true } | { ok: false; message: string }>;
   signOut(): Promise<void>;
+  setFavoriteTeam(team: string): Promise<{ ok: true } | { ok: false; message: string }>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -18,15 +26,13 @@ export function useAuth() {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<{ id: string; email: string; isAdmin?: boolean } | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     async function init() {
       const res = await fetch("/api/auth/me", { cache: "no-store" }).catch(() => null);
-      const json = (await res?.json().catch(() => null)) as {
-        user: { id: string; email: string; isAdmin?: boolean } | null;
-      } | null;
+      const json = (await res?.json().catch(() => null)) as { user: AppUser | null } | null;
       setUser(json?.user ?? null);
       setReady(true);
     }
@@ -46,7 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }).catch(() => null);
 
         const json = (await res?.json().catch(() => null)) as
-          | { ok: true; user: { id: string; email: string; isAdmin?: boolean } }
+          | { ok: true; user: AppUser }
           | { ok: false; message: string }
           | null;
 
@@ -59,6 +65,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async signOut() {
         await fetch("/api/auth/logout", { method: "POST" }).catch(() => null);
         setUser(null);
+      },
+      async setFavoriteTeam(team) {
+        const res = await fetch("/api/user/favorite-team", {
+          method: "PUT",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ team }),
+        }).catch(() => null);
+
+        const json = (await res?.json().catch(() => null)) as
+          | { ok: true; favoriteTeam: string }
+          | { ok: false; message: string }
+          | null;
+
+        if (!res || !json || !json.ok) {
+          return { ok: false, message: json && "message" in json ? json.message : "Failed to save." };
+        }
+
+        setUser((prev) => (prev ? { ...prev, favoriteTeam: json.favoriteTeam } : prev));
+        return { ok: true };
       },
     }),
     [ready, user],

@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import type { FixtureMatch } from "@/lib/fixtures";
 import { flagUrlForTeam } from "@/lib/fixtures";
 import { getPredictionWindowState, kickoffMsFromFixtureRow } from "@/lib/kickoff";
-import { AuthModal } from "@/app/components/AuthModal";
 import { useAuth } from "@/app/components/AuthProvider";
 
 type WinnerPick = "home" | "away" | "draw";
@@ -40,11 +39,11 @@ function TeamWithFlag({ team, reverse = false }: { team: string; reverse?: boole
           alt=""
           width={20}
           height={15}
-          className="h-[15px] w-5 shrink-0 rounded-[2px] ring-1 ring-black/10 dark:ring-white/10"
+          className="h-[15px] w-5 shrink-0 rounded-[2px] ring-1 ring-secondary-border"
           loading="lazy"
         />
       ) : null}
-      <span className="whitespace-nowrap text-sm font-medium">{team}</span>
+      <span className="whitespace-nowrap text-base font-medium">{team}</span>
     </span>
   );
 }
@@ -65,7 +64,6 @@ export function FixtureCard({ match }: { match: FixtureMatch }) {
   const fixtureId = match.id ?? matchKey;
   const { user, ready } = useAuth();
 
-  const [authOpen, setAuthOpen] = useState(false);
   const [prediction, setPrediction] = useState<Prediction | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -174,11 +172,7 @@ export function FixtureCard({ match }: { match: FixtureMatch }) {
   );
 
   async function save() {
-    if (!isPending || !predictionWindow.open) return;
-    if (!user) {
-      setAuthOpen(true);
-      return;
-    }
+    if (!user || !isPending || !predictionWindow.open) return;
     const hs = homeScore === "" ? 0 : Number(homeScore);
     const as = awayScore === "" ? 0 : Number(awayScore);
     if (!Number.isFinite(hs) || !Number.isFinite(as) || hs < 0 || as < 0) return;
@@ -234,10 +228,7 @@ export function FixtureCard({ match }: { match: FixtureMatch }) {
     } catch {
       // ignore
     }
-    if (!user) {
-      setAuthOpen(true);
-      return;
-    }
+    if (!user) return;
 
     setSaving(true);
     const res = await fetch(`/api/predictions?fixtureId=${encodeURIComponent(fixtureId)}`, {
@@ -269,32 +260,32 @@ export function FixtureCard({ match }: { match: FixtureMatch }) {
   const canPredict = isPending && predictionWindow.open && ready && !!user && !saving;
 
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-zinc-950">
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col items-center gap-3">
-          <div className="flex items-center justify-center gap-6 sm:gap-10">
+    <div className="rounded-2xl border border-secondary-border bg-background p-5 shadow-sm sm:p-6">
+      <div className="flex flex-col gap-5 sm:gap-6">
+        <div className="flex flex-col items-center gap-4 sm:gap-5">
+          <div className="flex items-center justify-center gap-8 sm:gap-12">
             <TeamWithFlag team={match.home} />
-            <span className="text-xs font-medium text-zinc-300 dark:text-zinc-600">·</span>
+            <span className="text-xs font-medium text-gray-300">·</span>
             <TeamWithFlag team={match.away} reverse />
           </div>
 
-          <div className="flex items-center justify-center gap-3">
+          <div className="flex items-center justify-center gap-4">
           <input
             inputMode="numeric"
             value={homeScore}
             onChange={(e) => setHomeScore(normalizeScoreInput(e.target.value))}
             disabled={!canPredict}
-            className="h-9 w-12 rounded-lg border border-zinc-200 bg-white px-1 text-center text-sm tabular-nums outline-none focus:ring-2 focus:ring-zinc-300 disabled:opacity-60 dark:border-white/10 dark:bg-zinc-950 dark:focus:ring-white/20"
+            className="h-10 w-14 rounded-lg border border-secondary-border bg-background px-1 text-center text-sm tabular-nums outline-none focus:border-secondary-300 focus:ring-2 focus:ring-primary-500/30 disabled:opacity-60"
             placeholder="0"
             aria-label={`${match.home} score`}
           />
-          <span className="text-xs font-medium text-zinc-400 dark:text-zinc-500">vs</span>
+          <span className="text-sm font-medium text-gray-300">vs</span>
           <input
             inputMode="numeric"
             value={awayScore}
             onChange={(e) => setAwayScore(normalizeScoreInput(e.target.value))}
             disabled={!canPredict}
-            className="h-9 w-12 rounded-lg border border-zinc-200 bg-white px-1 text-center text-sm tabular-nums outline-none focus:ring-2 focus:ring-zinc-300 disabled:opacity-60 dark:border-white/10 dark:bg-zinc-950 dark:focus:ring-white/20"
+            className="h-10 w-14 rounded-lg border border-secondary-border bg-background px-1 text-center text-sm tabular-nums outline-none focus:border-secondary-300 focus:ring-2 focus:ring-primary-500/30 disabled:opacity-60"
             placeholder="0"
             aria-label={`${match.away} score`}
           />
@@ -303,68 +294,60 @@ export function FixtureCard({ match }: { match: FixtureMatch }) {
 
         <div className="min-w-0">
 
-          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-600 dark:text-zinc-400">
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-secondary-text">
             <span
               className={
                 isPending
-                  ? "rounded-full bg-amber-50 px-2 py-0.5 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
+                  ? "rounded-full bg-yellow-300 px-2 py-0.5 text-brown-500"
                   : isFinished
-                    ? "rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
-                    : "rounded-full bg-sky-50 px-2 py-0.5 text-sky-800 dark:bg-sky-950/40 dark:text-sky-200"
+                    ? "rounded-full bg-primary-50 px-2 py-0.5 text-primary-700"
+                    : "rounded-full bg-surface-blue-400 px-2 py-0.5 text-primary-700"
               }
             >
               {fixtureStatus}
             </span>
-            <span className="font-normal text-zinc-800 dark:text-zinc-200">{match.time}</span>
+            <span className="font-normal text-primary-text">{match.time}</span>
             {match.stage ? <span>{match.stage}</span> : null}
             {match.group ? <span>{match.group}</span> : null}
           </div>
 
           {location ? (
-            <div className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">{location}</div>
+            <div className="mt-2 text-xs text-secondary-text">{location}</div>
           ) : null}
 
           {isPending && !predictionWindow.open && predictionWindow.reason ? (
-            <div className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">{predictionWindow.reason}</div>
+            <div className="mt-2 text-xs text-secondary-text">{predictionWindow.reason}</div>
           ) : null}
 
           {prediction ? (
-            <div className="mt-2 text-xs text-zinc-700 dark:text-zinc-300">
+            <div className="mt-2 text-xs text-tertiary-700">
               Predicted:{" "}
-              <span className="font-normal text-zinc-900 dark:text-zinc-50">
+              <span className="font-normal text-primary-text">
                 {winnerLabel(prediction.winner, match)} {prediction.homeScore}-{prediction.awayScore}
               </span>
             </div>
           ) : null}
 
           {serverError ? (
-            <div className="mt-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800 dark:border-red-500/20 dark:bg-red-950/40 dark:text-red-200">
+            <div className="mt-2 rounded-xl border border-danger-200 bg-danger-50 px-3 py-2 text-xs text-danger-600">
               {serverError}
             </div>
           ) : null}
         </div>
 
-        <div className="border-t border-zinc-100 pt-3 dark:border-white/10">
+        <div className="border-t border-secondary-75 pt-4 sm:pt-5">
           {!ready ? null : isFinished ? (
-            <p className="text-center text-xs text-zinc-500 dark:text-zinc-400">Match finished</p>
+            <p className="text-center text-xs text-secondary-text">Match finished</p>
           ) : !isPending ? (
-            <p className="text-center text-xs text-zinc-500 dark:text-zinc-400">Predictions closed</p>
+            <p className="text-center text-xs text-secondary-text">Predictions closed</p>
           ) : !predictionWindow.open ? (
-            <p className="text-center text-xs text-zinc-500 dark:text-zinc-400">Outside prediction window</p>
-          ) : !user ? (
-            <button
-              type="button"
-              onClick={() => setAuthOpen(true)}
-              className="inline-flex h-9 w-full items-center justify-center rounded-full border border-zinc-200 bg-white text-xs text-zinc-800 transition-colors hover:bg-zinc-50 dark:border-white/10 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-white/5"
-            >
-              Sign in to predict
-            </button>
+            <p className="text-center text-xs text-secondary-text">Outside prediction window</p>
           ) : (
             <button
               type="button"
               onClick={() => void save()}
               disabled={saving}
-              className="inline-flex h-9 w-full items-center justify-center rounded-full bg-zinc-900 text-xs font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-60 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+              className="shadow-claros-button inline-flex h-10 w-full items-center justify-center rounded-full bg-primary-600 font-semibold text-sm text-primary-foreground transition-colors hover:bg-primary-700 disabled:opacity-60"
             >
               {saving ? "Saving…" : "Save prediction"}
             </button>
@@ -372,7 +355,6 @@ export function FixtureCard({ match }: { match: FixtureMatch }) {
         </div>
       </div>
 
-      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
     </div>
   );
 }

@@ -15,7 +15,7 @@ export async function GET() {
       const supabase = getSupabaseServerClient();
       const { data } = await supabase
         .from("app_users")
-        .select("id,email,is_admin")
+        .select("id,email,is_admin,favorite_team")
         .eq("id", user.id)
         .maybeSingle();
       if (!data) {
@@ -31,7 +31,14 @@ export async function GET() {
         return NextResponse.json({ user: null });
       }
 
-      return NextResponse.json({ user: { id: user.id, email: user.email, isAdmin: data.is_admin } });
+      return NextResponse.json({
+        user: {
+          id: user.id,
+          email: user.email,
+          isAdmin: data.is_admin,
+          favoriteTeam: data.favorite_team ?? null,
+        },
+      });
     } catch {
       // If server isn't configured, don't claim user is logged in.
       return NextResponse.json({ user: null });

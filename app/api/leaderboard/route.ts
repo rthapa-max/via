@@ -12,12 +12,50 @@ export async function GET() {
     );
   }
 
-  const { data, error } = await supabase
-    .from("leaderboard")
-    .select("email,predicted,correct,incorrect,draw,points")
+  const { data: users, error: usersError } = await supabase
+    .from("app_users")
+    .select("id,email,favorite_team")
     .limit(200);
 
-  if (error) return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
-  return NextResponse.json({ ok: true, rows: data ?? [] });
-}
+  if (usersError) {
+    return NextResponse.json({ ok: false, message: usersError.message }, { status: 500 });
+  }
 
+  const [{ data: pointRows, error: pointsError }, { data: predictionRows, error: predictionsError }] =
+    await Promise.all([
+      supabase.from("prediction_points").select("user_id,points"),
+      supabase.from("predictions").select("user_id"),
+    ]);
+
+  if (pointsError) {
+    return NextResponse.json({ ok: false, message: pointsError.message }, { status: 500 });
+  }
+
+  if (predictionsError) {
+    return NextResponse.json({ ok: false, message: predictionsError.message }, { status: 500 });
+  }
+
+  const pointsByUser = new Map<string, number>();
+  for (const row of pointRows ?? []) {
+    if (row.points == null) continue;
+    const userId = row.user_id as string;
+    pointsByUser.set(userId, (pointsByUser.get(userId) ?? 0) + Number(row.points));
+  }
+
+  const predictionsByUser = new Map<string, number>();
+  for (const row of predictionRows ?? []) {
+    const userId = row.user_id as string;
+    predictionsByUser.set(userId, (predictionsByUser.get(userId) ?? 0) + 1);
+  }
+
+  const rows = (users ?? [])
+    .map((user) => ({
+      email: user.email as string,
+      favorite_team: (user.favorite_team as string | null) ?? null,
+      predictions: predictionsByUser.get(user.id as string) ?? 0,
+      points: pointsByUser.get(user.id as string) ?? 0,
+    }))
+    .sort((a, b) => b.points - a.points || a.email.localeCompare(b.email));
+
+  return NextResponse.json({ ok: true, rows });
+}

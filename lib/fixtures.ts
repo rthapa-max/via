@@ -29,6 +29,31 @@ const MONTHS: Record<string, number> = {
   december: 11,
 };
 
+const WEEKDAY_SHORT: Record<string, string> = {
+  monday: "Mon",
+  tuesday: "Tue",
+  wednesday: "Wed",
+  thursday: "Thu",
+  friday: "Fri",
+  saturday: "Sat",
+  sunday: "Sun",
+};
+
+const MONTH_SHORT: Record<string, string> = {
+  january: "Jan",
+  february: "Feb",
+  march: "Mar",
+  april: "Apr",
+  may: "May",
+  june: "Jun",
+  july: "Jul",
+  august: "Aug",
+  september: "Sep",
+  october: "Oct",
+  november: "Nov",
+  december: "Dec",
+};
+
 /** Parse "Friday 12 June 2026" into a sortable UTC timestamp. */
 export function dateLabelToSortValue(dateLabel: string) {
   const parts = dateLabel.trim().split(/\s+/);
@@ -38,6 +63,39 @@ export function dateLabelToSortValue(dateLabel: string) {
   const year = Number(parts[3]);
   if (!Number.isFinite(day) || !Number.isFinite(year) || month === undefined) return Number.POSITIVE_INFINITY;
   return Date.UTC(year, month, day);
+}
+
+/** Compact label for date tabs, e.g. "Fri 12 Jun". */
+export function formatDateTabLabel(dateLabel: string) {
+  const parts = dateLabel.trim().split(/\s+/);
+  if (parts.length < 4) return dateLabel;
+  const weekday = WEEKDAY_SHORT[parts[0]?.toLowerCase()] ?? parts[0];
+  const day = parts[1];
+  const month = MONTH_SHORT[parts[2]?.toLowerCase()] ?? parts[2];
+  return `${weekday} ${day} ${month}`;
+}
+
+export function sortDateLabels(dateLabels: string[]) {
+  return [...dateLabels].sort((a, b) => dateLabelToSortValue(a) - dateLabelToSortValue(b));
+}
+
+/** Prefer today, then nearest upcoming date, otherwise the latest past date. */
+export function pickDefaultFixtureDate(dateLabels: string[]) {
+  if (dateLabels.length === 0) return null;
+
+  const sorted = sortDateLabels(dateLabels);
+  const today = new Date();
+  const todayMs = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+
+  for (const label of sorted) {
+    if (dateLabelToSortValue(label) === todayMs) return label;
+  }
+
+  for (const label of sorted) {
+    if (dateLabelToSortValue(label) >= todayMs) return label;
+  }
+
+  return sorted[sorted.length - 1] ?? null;
 }
 
 /** Parse "07:45" into minutes since midnight for sorting. */

@@ -107,8 +107,9 @@ export async function sendDemoPredictionWindowClosedEmail() {
       city: "Mexico City",
       closedAt: new Date().toISOString(),
       predictions: [
-        { userDisplay: "@demo_user", homeScore: 2, awayScore: 1, winner: "Mexico" },
-        { userDisplay: "alice@example.com", homeScore: 1, awayScore: 1, winner: "Draw" },
+        { userDisplay: "@rupak", homeScore: 2, awayScore: 1, winner: "Mexico" },
+        { userDisplay: "@dev_user", homeScore: 1, awayScore: 1, winner: "Draw" },
+        { userDisplay: "player@example.com", homeScore: 0, awayScore: 2, winner: "South Africa" },
       ],
     },
     { demo: true },

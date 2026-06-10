@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
-import { processPredictionWindowClosures } from "@/lib/predictionClose";
-import { getPredictionNotifyEmails } from "@/lib/resend";
+import { getPredictionNotifyEmails, sendDemoPredictionWindowClosedEmail } from "@/lib/resend";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const at = new Date().toISOString();
-  // const demo = url.searchParams.get("demo") === "1";
 
   console.log("[cron/prediction-close] hit", {
     at,
@@ -13,13 +11,12 @@ export async function GET(req: Request) {
     query: Object.fromEntries(url.searchParams),
     userAgent: req.headers.get("user-agent"),
     notifyEmails: getPredictionNotifyEmails(),
-    // demo,
+    fakeData: true,
   });
 
   try {
-
-    const result = await processPredictionWindowClosures();
-    const response = { ok: true, at, ...result };
+    const sentTo = await sendDemoPredictionWindowClosedEmail();
+    const response = { ok: true, at, fakeData: true, sentTo, emailsSent: 1 };
     console.log("[cron/prediction-close] done", response);
     return NextResponse.json(response);
   } catch (error) {

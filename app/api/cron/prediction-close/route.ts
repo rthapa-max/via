@@ -3,6 +3,11 @@ import { processPredictionWindowClosures } from "@/lib/predictionClose";
 import { sendDemoPredictionWindowClosedEmail } from "@/lib/resend";
 
 function authorizeCron(req: Request) {
+  const url = new URL(req.url);
+  if (process.env.NODE_ENV === "development" && url.searchParams.get("demo") === "1") {
+    return true;
+  }
+
   const secret = process.env.CRON_SECRET;
   if (!secret) return process.env.NODE_ENV === "development";
 

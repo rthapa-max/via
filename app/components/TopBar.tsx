@@ -34,14 +34,14 @@ export function TopBar() {
         <div className="flex shrink-0 items-center gap-2">
           <PredictionHistoryButton />
 
-          {user?.isAdmin ? (
+          {/* {user?.isAdmin ? (
             <Link
               href="/admin"
               className="hidden h-8 items-center justify-center rounded-full border border-zinc-200 bg-white px-3 text-xs text-zinc-700 transition-colors hover:bg-zinc-50 sm:inline-flex dark:border-white/10 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-white/5"
             >
               Admin
             </Link>
-          ) : null}
+          ) : null} */}
 
           {user ? (
             <button

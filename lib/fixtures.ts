@@ -79,6 +79,38 @@ export function sortDateLabels(dateLabels: string[]) {
   return [...dateLabels].sort((a, b) => dateLabelToSortValue(a) - dateLabelToSortValue(b));
 }
 
+export type FixtureDatePeriod = "played" | "today" | "upcoming";
+
+export function todayUtcMs() {
+  const today = new Date();
+  return Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+}
+
+export function fixtureDatePeriod(dateLabel: string): FixtureDatePeriod {
+  const ms = dateLabelToSortValue(dateLabel);
+  const today = todayUtcMs();
+  if (ms < today) return "played";
+  if (ms === today) return "today";
+  return "upcoming";
+}
+
+export function filterDatesByPeriod(dateLabels: string[], period: FixtureDatePeriod) {
+  return sortDateLabels(dateLabels.filter((label) => fixtureDatePeriod(label) === period));
+}
+
+export function pickDefaultFixtureDateForPeriod(dateLabels: string[], period: FixtureDatePeriod) {
+  const filtered = filterDatesByPeriod(dateLabels, period);
+  if (filtered.length === 0) return null;
+  if (period === "played") return filtered[filtered.length - 1] ?? null;
+  return filtered[0] ?? null;
+}
+
+export function pickDefaultFixtureDatePeriod(dateLabels: string[]) {
+  if (filterDatesByPeriod(dateLabels, "today").length > 0) return "today";
+  if (filterDatesByPeriod(dateLabels, "upcoming").length > 0) return "upcoming";
+  return "played";
+}
+
 /** Prefer today, then nearest upcoming date, otherwise the latest past date. */
 export function pickDefaultFixtureDate(dateLabels: string[]) {
   if (dateLabels.length === 0) return null;

@@ -18,6 +18,27 @@ alter table public.app_users
 alter table public.app_users
   add column if not exists favorite_team text;
 
+alter table public.app_users
+  add column if not exists username text;
+
+create unique index if not exists app_users_username_lower_idx
+  on public.app_users (lower(username));
+
+alter table public.app_users
+  alter column email drop not null;
+
+alter table public.app_users
+  drop constraint if exists app_users_email_or_username;
+
+alter table public.app_users
+  add constraint app_users_email_or_username
+  check (email is not null or username is not null);
+
+-- Keep stored usernames lowercase to match app_users_username_lower_idx lookups.
+update public.app_users
+set username = lower(username)
+where username is not null and username <> lower(username);
+
 create table if not exists public.fixtures (
   id text primary key,
   date_label text not null,
@@ -168,9 +189,10 @@ select
 from public.predictions p
 join public.fixtures f on f.id = p.fixture_id;
 
-create view public.leaderboard as
+create or replace view public.leaderboard as
 select
   u.email,
+  u.username,
   u.favorite_team,
   count(pp.fixture_id) as predicted,
   count(*) filter (where pp.fixture_status = 'finished' and pp.points = 3) as correct,
@@ -179,6 +201,6 @@ select
   coalesce(sum(pp.points), 0) as points
 from public.app_users u
 left join public.prediction_points pp on pp.user_id = u.id
-group by u.email, u.favorite_team
-order by points desc, correct desc, predicted desc, u.email asc;
+group by u.email, u.username, u.favorite_team
+order by points desc, correct desc, predicted desc, coalesce(u.username, u.email) asc;
 

@@ -4,7 +4,8 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 type AppUser = {
   id: string;
-  email: string;
+  email: string | null;
+  username?: string | null;
   isAdmin?: boolean;
   favoriteTeam?: string | null;
 };
@@ -12,7 +13,11 @@ type AppUser = {
 type AuthContextValue = {
   user: AppUser | null;
   ready: boolean;
-  login(email: string, password: string): Promise<{ ok: true } | { ok: false; message: string }>;
+  login(
+    username: string,
+    email: string,
+    password: string,
+  ): Promise<{ ok: true } | { ok: false; message: string }>;
   signOut(): Promise<void>;
   setFavoriteTeam(team: string): Promise<{ ok: true } | { ok: false; message: string }>;
 };
@@ -44,11 +49,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     () => ({
       user,
       ready,
-      async login(email, password) {
+      async login(username, email, password) {
         const res = await fetch("/api/auth/login", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify({ username, email, password }),
         }).catch(() => null);
 
         const json = (await res?.json().catch(() => null)) as

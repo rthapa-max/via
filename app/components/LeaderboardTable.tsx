@@ -5,6 +5,7 @@ import { flagUrlForTeam } from "@/lib/fixtures";
 
 type LeaderRow = {
   email: string;
+  username?: string | null;
   favorite_team?: string | null;
   points?: number;
 };
@@ -24,8 +25,24 @@ function PlayerFlag({ team }: { team: string }) {
   );
 }
 
-function displayName(email: string) {
-  return email.split("@")[0] ?? email;
+function displayName(row: LeaderRow) {
+  if (row.username) return row.username;
+  if (row.email) return row.email.split("@")[0] ?? row.email;
+  return "Player";
+}
+
+function LeaderCrown() {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" className="h-3.5 w-3.5 shrink-0" aria-hidden="true">
+      <path
+        d="M2.5 12.5h11M3.5 12.5 4.5 5.5l3 2.5 1.5-3.5 1.5 3.5 3-2.5 1 7"
+        stroke="currentColor"
+        strokeWidth="1.25"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 }
 
 export function LeaderboardTable() {
@@ -75,7 +92,7 @@ export function LeaderboardTable() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="table-striped table-borderless w-full text-left text-sm">
+            <table className="table-borderless w-full text-left text-sm">
               <thead className="text-xs text-secondary-text">
                 <tr>
                   <th className="pb-3 pl-4 pr-4 font-normal sm:pl-6">#</th>
@@ -84,20 +101,54 @@ export function LeaderboardTable() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-secondary-75 text-primary-text">
-                {rows.map((row, index) => (
-                  <tr key={row.email} className="hover:bg-secondary-50">
-                    <td className="py-3.5 pl-4 pr-4 tabular-nums text-gray-400 sm:pl-6">{index + 1}</td>
-                    <td className="max-w-[14rem] py-3.5 pr-4" title={row.email}>
-                      <span className="inline-flex min-w-0 items-center gap-2.5">
-                        <span className="truncate">{displayName(row.email)}</span>
-                        {row.favorite_team ? <PlayerFlag team={row.favorite_team} /> : null}
-                      </span>
-                    </td>
-                    <td className="py-3.5 pl-4 pr-4 text-right font-semibold tabular-nums text-primary-text sm:pr-6">
-                      {row.points ?? 0}
-                    </td>
-                  </tr>
-                ))}
+                {rows.map((row, index) => {
+                  const isLeader = index === 0;
+                  return (
+                    <tr
+                      key={row.email}
+                      className={
+                        isLeader
+                          ? "bg-gradient-to-r from-yellow-300/50 via-primary-50 to-surface-blue-50"
+                          : "hover:bg-secondary-50"
+                      }
+                    >
+                      <td className="py-3.5 pl-4 pr-4 sm:pl-6">
+                        {isLeader ? (
+                          <span className="inline-flex items-center gap-1 font-semibold tabular-nums text-yellow-600">
+                            <LeaderCrown />
+                            1
+                          </span>
+                        ) : (
+                          <span className="tabular-nums text-gray-400">{index + 1}</span>
+                        )}
+                      </td>
+                      <td className="max-w-[14rem] py-3.5 pr-4" title={row.email}>
+                        <span className="inline-flex min-w-0 items-center gap-2">
+                          <span
+                            className={`truncate ${isLeader ? "font-semibold text-primary-dark" : ""}`}
+                          >
+                            {displayName(row)}
+                          </span>
+                          {isLeader ? (
+                            <span className="shrink-0 rounded-full bg-primary-600 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-primary-foreground">
+                              Leader
+                            </span>
+                          ) : null}
+                          {row.favorite_team ? <PlayerFlag team={row.favorite_team} /> : null}
+                        </span>
+                      </td>
+                      <td
+                        className={`py-3.5 pl-4 pr-4 text-right tabular-nums sm:pr-6 ${
+                          isLeader
+                            ? "font-semibold text-primary-700"
+                            : "font-semibold text-primary-text"
+                        }`}
+                      >
+                        {row.points ?? 0}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

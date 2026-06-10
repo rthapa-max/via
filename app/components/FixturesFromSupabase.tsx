@@ -1,11 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FixtureCard } from "@/app/components/FixtureCard";
 import {
   compareByDateAndTime,
+  filterDatesByPeriod,
   formatDateTabLabel,
-  pickDefaultFixtureDate,
+  pickDefaultFixtureDateForPeriod,
+  pickDefaultFixtureDatePeriod,
+  type FixtureDatePeriod,
   type FixtureMatch,
 } from "@/lib/fixtures";
 
@@ -23,6 +26,18 @@ type FixtureRow = {
   kickoff_at: string | null;
   result_home_score: number | null;
   result_away_score: number | null;
+};
+
+const PERIOD_FILTERS: { id: FixtureDatePeriod; label: string }[] = [
+  { id: "played", label: "Matches Played" },
+  { id: "today", label: "Today's Matches" },
+  { id: "upcoming", label: "Upcoming Matches" },
+];
+
+const EMPTY_PERIOD_MESSAGE: Record<FixtureDatePeriod, string> = {
+  played: "No played matches yet.",
+  today: "No matches scheduled for today.",
+  upcoming: "No upcoming matches.",
 };
 
 function toMatch(r: FixtureRow): FixtureMatch {
@@ -43,12 +58,18 @@ function toMatch(r: FixtureRow): FixtureMatch {
 
 export function FixturesFromSupabase() {
   const [dates, setDates] = useState<string[]>([]);
+  const [matchPeriod, setMatchPeriod] = useState<FixtureDatePeriod>("today");
   const [activeDate, setActiveDate] = useState<string | null>(null);
   const [rows, setRows] = useState<FixtureRow[]>([]);
   const [loadingDates, setLoadingDates] = useState(true);
   const [loadingFixtures, setLoadingFixtures] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  const filteredDates = useMemo(
+    () => filterDatesByPeriod(dates, matchPeriod),
+    [dates, matchPeriod],
+  );
 
   const loadFixtures = useCallback(async (dateLabel: string) => {
     setLoadingFixtures(true);
@@ -92,13 +113,27 @@ export function FixturesFromSupabase() {
       }
 
       const nextDates = json.dates ?? [];
+      const initialPeriod = pickDefaultFixtureDatePeriod(nextDates);
       setDates(nextDates);
-      setActiveDate(pickDefaultFixtureDate(nextDates));
+      setMatchPeriod(initialPeriod);
+      setActiveDate(pickDefaultFixtureDateForPeriod(nextDates, initialPeriod));
       setLoadingDates(false);
     }
 
     void loadDates();
   }, []);
+
+  useEffect(() => {
+    if (filteredDates.length === 0) {
+      setActiveDate(null);
+      setRows([]);
+      return;
+    }
+
+    if (!activeDate || !filteredDates.includes(activeDate)) {
+      setActiveDate(pickDefaultFixtureDateForPeriod(dates, matchPeriod));
+    }
+  }, [activeDate, dates, filteredDates, matchPeriod]);
 
   useEffect(() => {
     if (!activeDate) return;
@@ -109,7 +144,7 @@ export function FixturesFromSupabase() {
     if (!activeDate) return;
     const tab = tabRefs.current[activeDate];
     tab?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
-  }, [activeDate, dates]);
+  }, [activeDate, filteredDates]);
 
   if (loadingDates) {
     return <div className="py-4 text-sm text-secondary-text">Loading fixture dates…</div>;
@@ -124,58 +159,96 @@ export function FixturesFromSupabase() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="overflow-x-auto px-1 py-1.5 [scrollbar-width:thin]">
-        <div
-          role="tablist"
-          aria-label="Fixture dates"
-          className="flex w-max min-w-full gap-2 py-0.5"
-        >
-          {dates.map((dateLabel) => {
-            const selected = dateLabel === activeDate;
-            return (
+    <div className="space-y-4">
+      <div
+        role="tablist"
+        aria-label="Match period"
+        className="flex flex-wrap items-center gap-1 text-sm"
+      >
+        {PERIOD_FILTERS.map((period, index) => {
+          const selected = period.id === matchPeriod;
+          return (
+            <div key={period.id} className="flex items-center gap-1">
+              {index > 0 ? (
+                <span className="px-1 text-secondary-border" aria-hidden="true">
+                  |
+                </span>
+              ) : null}
               <button
-                key={dateLabel}
-                ref={(el) => {
-                  tabRefs.current[dateLabel] = el;
-                }}
                 type="button"
                 role="tab"
                 aria-selected={selected}
-                onClick={() => setActiveDate(dateLabel)}
-                className={`shrink-0 rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+                onClick={() => setMatchPeriod(period.id)}
+                className={`rounded-md px-2 py-1 font-medium transition-colors ${
                   selected
-                    ? "border-primary-600 bg-primary-600 text-primary-foreground"
-                    : "border-secondary-border bg-background text-secondary-text hover:bg-secondary-50"
+                    ? "text-primary-600"
+                    : "text-secondary-text hover:text-primary-text"
                 }`}
               >
-                {formatDateTabLabel(dateLabel)}
+                {period.label}
               </button>
-            );
-          })}
-        </div>
+            </div>
+          );
+        })}
       </div>
 
-      {error ? (
-        <div className="rounded-xl border border-danger-200 bg-danger-50 px-4 py-3 text-sm text-danger-600">
-          {error}
-        </div>
-      ) : null}
-
-      {loadingFixtures ? (
-        <div className="py-12 text-center text-sm text-secondary-text">
-          Loading fixtures…
-        </div>
-      ) : rows.length === 0 ? (
-        <div className="py-12 text-center text-sm text-secondary-text">
-          No fixtures on this date.
+      {filteredDates.length === 0 ? (
+        <div className="py-8 text-center text-sm text-secondary-text">
+          {EMPTY_PERIOD_MESSAGE[matchPeriod]}
         </div>
       ) : (
-        <div className="grid gap-5">
-          {rows.map((row) => (
-            <FixtureCard key={row.id} match={toMatch(row)} />
-          ))}
-        </div>
+        <>
+          <div className="overflow-x-auto px-1 py-1.5 [scrollbar-width:thin]">
+            <div
+              role="tablist"
+              aria-label="Fixture dates"
+              className="flex w-max min-w-full gap-2 py-0.5"
+            >
+              {filteredDates.map((dateLabel) => {
+                const selected = dateLabel === activeDate;
+                return (
+                  <button
+                    key={dateLabel}
+                    ref={(el) => {
+                      tabRefs.current[dateLabel] = el;
+                    }}
+                    type="button"
+                    role="tab"
+                    aria-selected={selected}
+                    onClick={() => setActiveDate(dateLabel)}
+                    className={`shrink-0 rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+                      selected
+                        ? "border-primary-600 bg-primary-600 text-primary-foreground"
+                        : "border-secondary-border bg-background text-secondary-text hover:bg-secondary-50"
+                    }`}
+                  >
+                    {formatDateTabLabel(dateLabel)}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {error ? (
+            <div className="rounded-xl border border-danger-200 bg-danger-50 px-4 py-3 text-sm text-danger-600">
+              {error}
+            </div>
+          ) : null}
+
+          {loadingFixtures ? (
+            <div className="py-12 text-center text-sm text-secondary-text">Loading fixtures…</div>
+          ) : rows.length === 0 ? (
+            <div className="py-12 text-center text-sm text-secondary-text">
+              No fixtures on this date.
+            </div>
+          ) : (
+            <div className="grid gap-5">
+              {rows.map((row) => (
+                <FixtureCard key={row.id} match={toMatch(row)} />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

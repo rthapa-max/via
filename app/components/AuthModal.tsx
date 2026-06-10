@@ -37,7 +37,7 @@ export function AuthModal({
               Sign in
             </div>
             <div className="mt-1 text-xs text-secondary-text">
-              Enter email and password to continue.
+              Enter a username or email and password to continue.
             </div>
           </div>
           <button

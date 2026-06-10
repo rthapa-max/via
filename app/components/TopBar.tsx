@@ -35,7 +35,9 @@ export function TopBar() {
               Claros WC26 Prediction
             </div>
             {user ? (
-              <div className="truncate text-xs text-secondary-text">{user.email}</div>
+              <div className="truncate text-xs text-secondary-text">
+                {user.username ? `@${user.username}` : (user.email ?? "Signed in")}
+              </div>
             ) : null}
           </div>
         </Link>

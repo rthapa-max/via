@@ -14,7 +14,7 @@ export async function GET() {
 
   const { data: users, error: usersError } = await supabase
     .from("app_users")
-    .select("id,email,favorite_team")
+    .select("id,email,username,favorite_team")
     .limit(200);
 
   if (usersError) {
@@ -51,11 +51,18 @@ export async function GET() {
   const rows = (users ?? [])
     .map((user) => ({
       email: user.email as string,
+      username: (user.username as string | null) ?? null,
       favorite_team: (user.favorite_team as string | null) ?? null,
       predictions: predictionsByUser.get(user.id as string) ?? 0,
       points: pointsByUser.get(user.id as string) ?? 0,
     }))
-    .sort((a, b) => b.points - a.points || a.email.localeCompare(b.email));
+    .sort((a, b) => {
+      const byPoints = b.points - a.points;
+      if (byPoints !== 0) return byPoints;
+      const nameA = a.username ?? a.email;
+      const nameB = b.username ?? b.email;
+      return nameA.localeCompare(nameB);
+    });
 
   return NextResponse.json({ ok: true, rows });
 }

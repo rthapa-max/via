@@ -15,7 +15,7 @@ export async function GET() {
       const supabase = getSupabaseServerClient();
       const { data } = await supabase
         .from("app_users")
-        .select("id,email,is_admin,favorite_team")
+        .select("id,email,username,is_admin,favorite_team")
         .eq("id", user.id)
         .maybeSingle();
       if (!data) {
@@ -35,6 +35,7 @@ export async function GET() {
         user: {
           id: user.id,
           email: user.email,
+          username: data.username ?? null,
           isAdmin: data.is_admin,
           favoriteTeam: data.favorite_team ?? null,
         },

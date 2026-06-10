@@ -8,6 +8,7 @@ const inputClassName =
 
 export function LoginForm({ onSuccess }: { onSuccess?: () => void }) {
   const { login } = useAuth();
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -17,8 +18,9 @@ export function LoginForm({ onSuccess }: { onSuccess?: () => void }) {
     setBusy(true);
     setError(null);
 
+    const trimmedUsername = username.trim();
     const trimmedEmail = email.trim();
-    const res = await login(trimmedEmail, password);
+    const res = await login(trimmedUsername, trimmedEmail, password);
     if (!res.ok) {
       setBusy(false);
       setError(res.message);
@@ -29,8 +31,28 @@ export function LoginForm({ onSuccess }: { onSuccess?: () => void }) {
     onSuccess?.();
   }
 
+  const hasUsername = username.trim().length >= 3;
+  const hasEmail = email.trim().includes("@");
+  const canSubmit = (hasUsername || hasEmail) && password.length >= 6;
+
   return (
     <div className="grid gap-4">
+      <p className="text-[11px] leading-relaxed text-tertiary-400">
+        Use a username or email — only one is required.
+      </p>
+
+      <label className="grid gap-1.5">
+        <span className="text-xs font-medium text-secondary-text">Username</span>
+        <input
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          type="text"
+          autoComplete="username"
+          className={inputClassName}
+          placeholder="yourname"
+        />
+      </label>
+
       <label className="grid gap-1.5">
         <span className="text-xs font-medium text-secondary-text">Email</span>
         <input
@@ -68,7 +90,7 @@ export function LoginForm({ onSuccess }: { onSuccess?: () => void }) {
       <button
         type="button"
         onClick={() => void submit()}
-        disabled={busy || !email.trim() || !password}
+        disabled={busy || !canSubmit}
         className="shadow-claros-button mt-1 inline-flex h-11 w-full items-center justify-center rounded-lg bg-primary-600 px-4 font-semibold text-sm text-primary-foreground transition-colors hover:bg-primary-700 disabled:opacity-50"
       >
         {busy ? "Please wait…" : "Continue"}

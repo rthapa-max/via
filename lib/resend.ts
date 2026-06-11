@@ -111,7 +111,9 @@ export const PREDICTION_NOTIFY_EMAILS = [
   "mrauniyar@clarosanalytics.com",
   "psthapit@clarosanalytics.com",
   "ggiri@clarosanalytics.com",
-  "bvaidya@clarosanalytics.com"
+  "bvaidya@clarosanalytics.com",
+  "rupakt525@gmail.com",
+  "rupakisdeveloper@gmail.com"
 ] as const;
 
 export function getPredictionNotifyEmails() {

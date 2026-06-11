@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { flagUrlForTeam } from "@/lib/fixtures";
 
 export type PredictionEmailPayload = {
   userDisplay: string;
@@ -50,9 +51,20 @@ export type PredictionWindowClosedPayload = {
   }[];
 };
 
+function teamFlagImg(team: string) {
+  const url = flagUrlForTeam(team, 40);
+  if (!url) return "";
+  return `<img src="${url}" alt="" width="24" height="18" style="vertical-align:middle;margin-right:6px;border-radius:2px;border:1px solid #e5e7eb" />`;
+}
+
+function matchWithFlagsHtml(home: string, away: string) {
+  return `${teamFlagImg(home)}${home} &nbsp;vs&nbsp; ${teamFlagImg(away)}${away}`;
+}
+
 function buildPredictionWindowClosedHtml(payload: PredictionWindowClosedPayload) {
   const when = [payload.dateLabel, payload.time, payload.city].filter(Boolean).join(" · ");
   const closedAt = new Date(payload.closedAt).toUTCString();
+  const matchLine = matchWithFlagsHtml(payload.home, payload.away);
 
   const rows =
     payload.predictions.length === 0
@@ -70,9 +82,9 @@ function buildPredictionWindowClosedHtml(payload: PredictionWindowClosedPayload)
 
   return `
     <h2>WC26 predictions closed</h2>
-    <p>The prediction window has closed for <strong>${payload.home} vs ${payload.away}</strong> (1 hour before kickoff).</p>
+    <p>The prediction window has closed for <strong>${matchLine}</strong> (1 hour before kickoff).</p>
     <table cellpadding="6" cellspacing="0" style="border-collapse:collapse;margin-bottom:12px">
-      <tr><td><strong>Match</strong></td><td>${payload.home} vs ${payload.away}</td></tr>
+      <tr><td><strong>Match</strong></td><td>${matchLine}</td></tr>
       <tr><td><strong>When</strong></td><td>${when}</td></tr>
       <tr><td><strong>Closed at</strong></td><td>${closedAt}</td></tr>
       <tr><td><strong>Predictions</strong></td><td>${payload.predictions.length}</td></tr>
@@ -87,8 +99,19 @@ function buildPredictionWindowClosedHtml(payload: PredictionWindowClosedPayload)
 }
 
 export const PREDICTION_NOTIFY_EMAILS = [
-  "rupakt525@gmail.com",
-  "rupakisdeveloper@gmail.com",
+  "adangi@clarosanalytics.com",
+  "sshrestha@clarosanalytics.com",
+  "nwaiba@clarosanalytics.com",
+  "rthapa@clarosanalytics.com",
+  "cghimire@clarosanalytics.com",
+  "dshrestha@clarosanalytics.com",
+  "sbajracharya@clarosanalytics.com",
+  "sparajuli@clarosanalytics.com",
+  "rpradhan@clarosanalytics.com",
+  "mrauniyar@clarosanalytics.com",
+  "psthapit@clarosanalytics.com",
+  "ggiri@clarosanalytics.com",
+  "bvaidya@clarosanalytics.com"
 ] as const;
 
 export function getPredictionNotifyEmails() {

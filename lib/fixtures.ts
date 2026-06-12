@@ -12,6 +12,8 @@ export type FixtureMatch = {
   city?: string;
   status?: FixturePredictionStatus;
   kickoffAt?: string;
+  resultHomeScore?: number | null;
+  resultAwayScore?: number | null;
 };
 
 const MONTHS: Record<string, number> = {

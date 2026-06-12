@@ -53,6 +53,8 @@ function toMatch(r: FixtureRow): FixtureMatch {
     city: r.city ?? undefined,
     status: r.status ?? "scheduled",
     kickoffAt: r.kickoff_at ?? undefined,
+    resultHomeScore: r.result_home_score,
+    resultAwayScore: r.result_away_score,
   };
 }
 

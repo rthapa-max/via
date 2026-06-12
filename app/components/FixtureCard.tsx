@@ -8,7 +8,9 @@ import {
   getPredictionWindowState,
   kickoffMsFromFixtureRow,
 } from "@/lib/kickoff";
+import { predictionPoints, predictionPointsClass } from "@/lib/scoring";
 import { useAuth } from "@/app/components/AuthProvider";
+import { FixturePredictionsButton } from "@/app/components/FixturePredictionsButton";
 
 type WinnerPick = "home" | "away" | "draw";
 
@@ -267,9 +269,34 @@ export function FixtureCard({ match }: { match: FixtureMatch }) {
   const isPending = fixtureStatus === "pending";
   const isFinished = fixtureStatus === "finished";
   const canPredict = isPending && predictionWindow.open && ready && !!user && !saving;
+  const hasResult =
+    isFinished &&
+    match.resultHomeScore != null &&
+    match.resultAwayScore != null &&
+    Number.isFinite(match.resultHomeScore) &&
+    Number.isFinite(match.resultAwayScore);
+
+  const earnedPoints = useMemo(() => {
+    if (!hasResult || !prediction) return null;
+    return predictionPoints(
+      prediction.homeScore,
+      prediction.awayScore,
+      prediction.winner,
+      match.resultHomeScore!,
+      match.resultAwayScore!,
+    );
+  }, [hasResult, prediction, match.resultHomeScore, match.resultAwayScore]);
 
   return (
-    <div className="rounded-2xl border border-secondary-border bg-background p-5 shadow-sm sm:p-6">
+    <div className="relative rounded-2xl border border-secondary-border bg-background p-5 shadow-sm sm:p-6">
+      {hasResult ? (
+        <div className="absolute left-4 top-4 sm:left-5 sm:top-5">
+          <FixturePredictionsButton
+            fixtureId={fixtureId}
+            matchLabel={`${match.home} vs ${match.away}`}
+          />
+        </div>
+      ) : null}
       <div className="flex flex-col gap-5 sm:gap-6">
         <div className="flex flex-col items-center gap-4 sm:gap-5">
           <div className="flex items-center justify-center gap-8 sm:gap-12">
@@ -278,27 +305,66 @@ export function FixtureCard({ match }: { match: FixtureMatch }) {
             <TeamWithFlag team={match.away} reverse />
           </div>
 
-          <div className="flex items-center justify-center gap-4">
-          <input
-            inputMode="numeric"
-            value={homeScore}
-            onChange={(e) => setHomeScore(normalizeScoreInput(e.target.value))}
-            disabled={!canPredict}
-            className="h-10 w-14 rounded-lg border border-secondary-border bg-background px-1 text-center text-sm tabular-nums outline-none focus:border-secondary-300 focus:ring-2 focus:ring-primary-500/30 disabled:opacity-60"
-            placeholder="0"
-            aria-label={`${match.home} score`}
-          />
-          <span className="text-sm font-medium text-gray-300">vs</span>
-          <input
-            inputMode="numeric"
-            value={awayScore}
-            onChange={(e) => setAwayScore(normalizeScoreInput(e.target.value))}
-            disabled={!canPredict}
-            className="h-10 w-14 rounded-lg border border-secondary-border bg-background px-1 text-center text-sm tabular-nums outline-none focus:border-secondary-300 focus:ring-2 focus:ring-primary-500/30 disabled:opacity-60"
-            placeholder="0"
-            aria-label={`${match.away} score`}
-          />
-          </div>
+          {isFinished ? (
+            <div className="flex flex-col items-center gap-3">
+              {hasResult ? (
+                <div className="flex items-center justify-center gap-4">
+                  <span className="min-w-10 text-center text-2xl font-semibold tabular-nums text-primary-text">
+                    {match.resultHomeScore}
+                  </span>
+                  <span className="text-sm font-medium text-gray-300">vs</span>
+                  <span className="min-w-10 text-center text-2xl font-semibold tabular-nums text-primary-text">
+                    {match.resultAwayScore}
+                  </span>
+                </div>
+              ) : (
+                <p className="text-sm text-secondary-text">Final score not recorded</p>
+              )}
+              <p className="text-xs font-medium uppercase tracking-wide text-secondary-text">
+                Final score
+              </p>
+              {prediction ? (
+                <p className="text-sm text-tertiary-700">
+                  Your prediction:{" "}
+                  <span className="rounded-md bg-primary-50 px-1.5 py-0.5 font-semibold tabular-nums text-primary-700">
+                    {prediction.homeScore}-{prediction.awayScore}
+                  </span>
+                  {earnedPoints != null ? (
+                    <span className={`ml-1.5 ${predictionPointsClass(earnedPoints)}`}>
+                      {earnedPoints} {earnedPoints === 1 ? "point" : "points"}
+                    </span>
+                  ) : null}
+                </p>
+              ) : (
+                <p className="text-sm text-tertiary-700">
+                  No prediction submitted{" "}
+                  <span className={predictionPointsClass(0)}>0 points</span>
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center gap-4">
+              <input
+                inputMode="numeric"
+                value={homeScore}
+                onChange={(e) => setHomeScore(normalizeScoreInput(e.target.value))}
+                disabled={!canPredict}
+                className="h-10 w-14 rounded-lg border border-secondary-border bg-background px-1 text-center text-sm tabular-nums outline-none focus:border-secondary-300 focus:ring-2 focus:ring-primary-500/30 disabled:opacity-60"
+                placeholder="0"
+                aria-label={`${match.home} score`}
+              />
+              <span className="text-sm font-medium text-gray-300">vs</span>
+              <input
+                inputMode="numeric"
+                value={awayScore}
+                onChange={(e) => setAwayScore(normalizeScoreInput(e.target.value))}
+                disabled={!canPredict}
+                className="h-10 w-14 rounded-lg border border-secondary-border bg-background px-1 text-center text-sm tabular-nums outline-none focus:border-secondary-300 focus:ring-2 focus:ring-primary-500/30 disabled:opacity-60"
+                placeholder="0"
+                aria-label={`${match.away} score`}
+              />
+            </div>
+          )}
         </div>
 
         <div className="min-w-0">
@@ -337,7 +403,7 @@ export function FixtureCard({ match }: { match: FixtureMatch }) {
             <div className="mt-2 text-xs text-secondary-text">{predictionWindow.reason}</div>
           ) : null}
 
-          {prediction ? (
+          {prediction && !isFinished ? (
             <div className="mt-2 text-xs text-tertiary-700">
               Predicted:{" "}
               <span className="font-normal text-primary-text">
@@ -354,9 +420,7 @@ export function FixtureCard({ match }: { match: FixtureMatch }) {
         </div>
 
         <div className="border-t border-secondary-75 pt-4 sm:pt-5">
-          {!ready ? null : isFinished ? (
-            <p className="text-center text-xs text-secondary-text">Match finished</p>
-          ) : !isPending ? (
+          {!ready ? null : isFinished ? null : !isPending ? (
             <p className="text-center text-xs text-secondary-text">Predictions closed</p>
           ) : !predictionWindow.open ? (
             <p className="text-center text-xs text-secondary-text">Outside prediction window</p>

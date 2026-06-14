@@ -1,5 +1,7 @@
 import { Resend } from "resend";
+import { getAllUserEmails } from "@/lib/appUsers";
 import { flagUrlForTeam } from "@/lib/fixtures";
+import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 export type PredictionEmailPayload = {
   userDisplay: string;
@@ -98,47 +100,15 @@ function buildPredictionWindowClosedHtml(payload: PredictionWindowClosedPayload)
   `.trim();
 }
 
-export const PREDICTION_NOTIFY_EMAILS = [
-  "adangi@clarosanalytics.com",
-  "sshrestha@clarosanalytics.com",
-  "nwaiba@clarosanalytics.com",
-  "rthapa@clarosanalytics.com",
-  "cghimire@clarosanalytics.com",
-  "dshrestha@clarosanalytics.com",
-  "sbajracharya@clarosanalytics.com",
-  "sparajuli@clarosanalytics.com",
-  "rpradhan@clarosanalytics.com",
-  "mrauniyar@clarosanalytics.com",
-  "psthapit@clarosanalytics.com",
-  "ggiri@clarosanalytics.com",
-  "bvaidya@clarosanalytics.com",
-  "rupakt525@gmail.com",
-  "rupakisdeveloper@gmail.com",
-
-  "trobinson@wspactuaries.com",
-  "todd@clarosanalytics.com",
-  "nsachdeva@clarosanalytics.com",
-  "mowen@clarosanalytics.com",
-  "gmiller@clarosanalytics.com",
-  "sbowman@wspactuaries.com",
-  "dwolsk@clarosanalytics.com",
-  "jdare@clarosanalytics.com",
-  "jsouthward@clarosanalytics.com",
-  "eweiner@clarosanalytics.com",
-  "ppatel@clarosanalytics.com",
-  "ericawclaros@gmail.com",
-  "svaidya@clarosanalytics.com",
-  "stillett@clarosanalytics.com"
-] as const;
-
-export function getPredictionNotifyEmails() {
-  return [...PREDICTION_NOTIFY_EMAILS];
+export async function getPredictionNotifyEmails() {
+  const supabase = getSupabaseServerClient();
+  return getAllUserEmails(supabase);
 }
 
 export async function sendPredictionWindowClosedEmail(payload: PredictionWindowClosedPayload) {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.RESEND_FROM_EMAIL;
-  const to = getPredictionNotifyEmails();
+  const to = await getPredictionNotifyEmails();
 
   if (!apiKey || !from) {
     console.warn("[resend] prediction-close skipped — missing config", {
@@ -183,7 +153,7 @@ export async function sendPredictionWindowClosedEmail(payload: PredictionWindowC
 export async function sendPredictionCompleteEmail(payload: PredictionEmailPayload) {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.RESEND_FROM_EMAIL;
-  const to = getPredictionNotifyEmails();
+  const to = await getPredictionNotifyEmails();
 
   if (!apiKey || !from) {
     console.warn("[resend] prediction saved skipped — missing config", {

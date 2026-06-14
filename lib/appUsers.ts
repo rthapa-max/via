@@ -57,3 +57,20 @@ export async function isUsernameTaken(
 export function isUsernameConstraintError(message: string) {
   return message.includes("app_users_username_lower_idx");
 }
+
+export async function getAllUserEmails(
+  supabase: SupabaseClient,
+): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("app_users")
+    .select("email")
+    .not("email", "is", null);
+
+  if (error) throw error;
+
+  const emails = (data ?? [])
+    .map((row) => row.email?.trim().toLowerCase())
+    .filter((email): email is string => Boolean(email && email.includes("@")));
+
+  return [...new Set(emails)];
+}

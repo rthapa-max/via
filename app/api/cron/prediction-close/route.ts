@@ -11,7 +11,7 @@ export async function GET(req: Request) {
     path: url.pathname,
     query: Object.fromEntries(url.searchParams),
     userAgent: req.headers.get("user-agent"),
-    notifyEmails: getPredictionNotifyEmails(),
+    notifyEmails: await getPredictionNotifyEmails(),
   });
 
   try {

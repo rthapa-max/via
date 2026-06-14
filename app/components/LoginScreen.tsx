@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { LoginForm } from "@/app/components/LoginForm";
-import clarosLogo from "@/app/Claros-logo-Color-large-TM.png";
+import clarosLogo from "@/app/image.png";
 import worldCupTrophy from "@/app/wct-removebg-preview.png";
 
 export function LoginScreen() {
@@ -43,7 +43,7 @@ export function LoginScreen() {
 
             <div className="text-center">
               <p className="text-[15px] leading-relaxed text-primary-text">
-                Are you ready for the World Cup, Team Claros?
+                Are you ready for the World Cup, Team Vianet?
               </p>
               <p className="mt-1 text-sm text-secondary-text">
                 Let&apos;s see how good you are with predictions !!

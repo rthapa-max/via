@@ -429,7 +429,7 @@ export function FixtureCard({ match }: { match: FixtureMatch }) {
               type="button"
               onClick={() => void save()}
               disabled={saving}
-              className="shadow-claros-button inline-flex h-10 w-full items-center justify-center rounded-full bg-primary-600 font-semibold text-sm text-primary-foreground transition-colors hover:bg-primary-700 disabled:opacity-60"
+              className="shadow-claros-button inline-flex h-10 w-full items-center justify-center rounded-md bg-primary-600 font-semibold text-sm text-primary-foreground transition-colors hover:bg-primary-700 disabled:opacity-60"
             >
               {saving ? "Saving…" : "Save prediction"}
             </button>

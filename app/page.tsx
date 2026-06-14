@@ -7,7 +7,7 @@ import { RequireAuth } from "@/app/components/RequireAuth";
 export default function Home() {
   return (
     <RequireAuth>
-      <div className="min-h-screen bg-secondary-50 font-sans text-primary-text">
+      <div className="min-h-screen bg-secondary-25 font-sans text-primary-text">
         <TopBar />
         <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-8 sm:py-10 lg:px-10">
           {/* <div className="mb-8 sm:mb-10">
@@ -27,7 +27,9 @@ export default function Home() {
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:gap-8 lg:items-start">
               <section className="lg:col-span-8">
                 <div className="mb-5 sm:mb-6">
-                  <h2 className="font-semibold text-base text-primary-text sm:text-lg">Fixtures</h2>
+                  <h2 className="font-semibold text-base text-primary-dark sm:text-lg">
+                    <span className="text-primary-600">Fixtures</span>
+                  </h2>
                   <p className="mt-1.5 text-sm text-secondary-text">
                     Enter scores when a match is open for predictions.
                   </p>

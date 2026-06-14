@@ -218,7 +218,7 @@ export function FixturesFromSupabase() {
                     role="tab"
                     aria-selected={selected}
                     onClick={() => setActiveDate(dateLabel)}
-                    className={`shrink-0 rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+                    className={`shrink-0 rounded-md border px-4 py-2 text-sm font-medium transition-colors ${
                       selected
                         ? "border-primary-600 bg-primary-600 text-primary-foreground"
                         : "border-secondary-border bg-background text-secondary-text hover:bg-secondary-50"

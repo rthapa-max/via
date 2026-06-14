@@ -8,7 +8,7 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
 
   if (!ready) {
     return (
-      <div className="relative flex min-h-screen items-center justify-center bg-surface-blue-50 text-sm text-secondary-text">
+      <div className="relative flex min-h-screen items-center justify-center bg-secondary-25 text-sm text-secondary-text">
         <div className="pointer-events-none absolute inset-0 bg-gradient-primary" aria-hidden="true" />
         <span className="relative">Loading…</span>
       </div>

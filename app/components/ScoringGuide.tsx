@@ -51,10 +51,10 @@ function InfoIcon() {
 export function ScoringGuide() {
   return (
     <section
-      className="rounded-lg border border-secondary-border bg-surface-blue-50 px-3 py-2 sm:px-4 sm:py-2.5"
+      className="rounded-lg border border-secondary-border bg-background px-3 py-2 shadow-sm sm:px-4 sm:py-2.5"
       aria-label="How points work"
     >
-      <p className="font-semibold text-xs text-primary-dark sm:text-sm">How points work</p>
+      <p className="font-semibold text-xs text-primary-600 sm:text-sm">How points work</p>
 
       <ul className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-4 sm:gap-x-4">
         {RULES.map((rule) => {

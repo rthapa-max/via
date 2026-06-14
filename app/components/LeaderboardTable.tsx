@@ -75,10 +75,10 @@ export function LeaderboardTable() {
   }, []);
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-secondary-border bg-background shadow-sm">
-      <div className="flex items-center justify-between gap-3 border-b border-secondary-border px-5 py-4 sm:px-6">
-        <h2 className="font-semibold text-base text-primary-text">Leaderboard</h2>
-        <span className="text-sm text-secondary-text">
+    <section className="overflow-hidden rounded-xl border border-secondary-border bg-background shadow-sm">
+      <div className="flex items-center justify-between gap-3 border-b border-secondary-border bg-primary-600 px-5 py-4 sm:px-6">
+        <h2 className="font-semibold text-base text-primary-foreground">Leaderboard</h2>
+        <span className="text-sm text-primary-100">
           {loading ? "Loading…" : `${rows.length} player${rows.length === 1 ? "" : "s"}`}
         </span>
       </div>
@@ -108,13 +108,13 @@ export function LeaderboardTable() {
                       key={row.email}
                       className={
                         isLeader
-                          ? "bg-gradient-to-r from-yellow-300/50 via-primary-50 to-surface-blue-50"
+                          ? "bg-gradient-to-r from-primary-50 via-primary-100/60 to-yellow-300/40"
                           : "hover:bg-secondary-50"
                       }
                     >
                       <td className="py-3.5 pl-4 pr-4 sm:pl-6">
                         {isLeader ? (
-                          <span className="inline-flex items-center gap-1 font-semibold tabular-nums text-yellow-600">
+                          <span className="inline-flex items-center gap-1 font-semibold tabular-nums text-primary-600">
                             <LeaderCrown />
                             1
                           </span>

@@ -91,7 +91,7 @@ export function LoginForm({ onSuccess }: { onSuccess?: () => void }) {
         type="button"
         onClick={() => void submit()}
         disabled={busy || !canSubmit}
-        className="shadow-claros-button mt-1 inline-flex h-11 w-full items-center justify-center rounded-lg bg-primary-600 px-4 font-semibold text-sm text-primary-foreground transition-colors hover:bg-primary-700 disabled:opacity-50"
+        className="shadow-claros-button mt-1 inline-flex h-11 w-full items-center justify-center rounded-md bg-primary-600 px-4 font-semibold text-sm text-primary-foreground transition-colors hover:bg-primary-700 disabled:opacity-50"
       >
         {busy ? "Please wait…" : "Continue"}
       </button>

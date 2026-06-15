@@ -9,17 +9,17 @@ export default function AdminPage() {
       <div className="min-h-screen bg-secondary-25 font-sans text-primary-text">
         <TopBar />
         <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
-          <div className="mb-6">
-            <h1 className="font-semibold text-xl tracking-tight sm:text-2xl">Admin</h1>
-            <p className="mt-1 text-sm text-secondary-text">
-              Manage match results and user accounts.
-            </p>
+          <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h1 className="font-semibold text-xl tracking-tight sm:text-2xl">Admin</h1>
+              <p className="mt-1 text-sm text-secondary-text">
+                Manage match results and user accounts.
+              </p>
+            </div>
+            <AdminPasswordReset />
           </div>
 
-          <div className="space-y-8">
-            <AdminPasswordReset />
-            <AdminResults />
-          </div>
+          <AdminResults />
         </main>
       </div>
     </RequireAuth>

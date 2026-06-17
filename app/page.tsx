@@ -2,6 +2,7 @@ import { TopBar } from "@/app/components/TopBar";
 import { LeaderboardTable } from "@/app/components/LeaderboardTable";
 import { ScoringGuide } from "@/app/components/ScoringGuide";
 import { FixturesFromSupabase } from "@/app/components/FixturesFromSupabase";
+import { PoweredByMinistore } from "@/app/components/PoweredByMinistore";
 import { RequireAuth } from "@/app/components/RequireAuth";
 
 export default function Home() {
@@ -35,6 +36,9 @@ export default function Home() {
                   </p>
                 </div>
                 <FixturesFromSupabase />
+                <div className="mt-8">
+                  <PoweredByMinistore variant="banner" />
+                </div>
               </section>
 
               <section className="lg:col-span-5">

@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { LoginForm } from "@/app/components/LoginForm";
+import { PoweredByMinistore } from "@/app/components/PoweredByMinistore";
 import viaNetLogo from "@/app/image.png";
 import worldCupTrophy from "@/app/wct-removebg-preview.png";
 
@@ -62,6 +63,10 @@ export function LoginScreen() {
           <div className="p-6">
             <LoginForm />
           </div>
+        </div>
+
+        <div className="mt-6">
+          <PoweredByMinistore variant="banner" />
         </div>
       </div>
     </div>

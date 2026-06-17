@@ -51,7 +51,7 @@ export async function GET() {
     .select("fixture_id,winner,home_score,away_score,updated_at,fixtures:fixture_id(home,away,date_label,time)")
     .eq("user_id", user.id)
     .order("updated_at", { ascending: false })
-    .limit(200);
+    // .limit(200);
 
   if (error) return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
   return NextResponse.json({ ok: true, predictions: data ?? [] });

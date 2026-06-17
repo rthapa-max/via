@@ -15,8 +15,7 @@ export async function GET() {
   const { data: users, error: usersError } = await supabase
     .from("app_users")
     .select("id,email,username,favorite_team")
-    .limit(200);
-
+    // .limit(200);
   if (usersError) {
     return NextResponse.json({ ok: false, message: usersError.message }, { status: 500 });
   }

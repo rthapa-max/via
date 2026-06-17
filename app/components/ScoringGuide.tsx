@@ -1,28 +1,29 @@
 const RULES = [
   {
     points: 3,
-    label: "Exact score",
-    example: "Your prediction matches the final score exactly (including 0–0 or 1–1).",
+    label: "Exact score or draw",
+    example:
+      "Pick 2-1 and result is 2-1, or pick 0-0 and result is 0-0, or pick 1-1 and result is 1-1.",
     tone: "primary" as const,
   },
   {
     points: 2,
-    label: "Correct outcome",
+    label: "Correct winner",
     example:
-      "Correct winner or draw, but wrong exact score (e.g. pick 3–2, result 2–1; pick 0–0, result 1–1).",
+      "Pick 3-2, result 2-1 (right winner). Pick 0-0, result 1-1 (draw, wrong score). Pick 1-3, result 0-2 (right winner).",
     tone: "yellow" as const,
   },
   {
     points: 1,
     label: "Participated",
     example:
-      "Any submitted prediction earns 1 point even if outcome is wrong. Leaving both fields blank and saving counts as 0–0.",
+      "Pick 0-0, result 2-0 (wrong outcome). Pick 2-0, result 1-2 (wrong winner and score). Any saved pick on a finished match earns 1 pt.",
     tone: "surface" as const,
   },
   {
     points: 0,
     label: "No prediction",
-    example: "No prediction submitted before the prediction window closes.",
+    example: "No pick submitted before predictions closed (1 hour before kickoff).",
     tone: "muted" as const,
   },
 ] as const;
@@ -51,10 +52,10 @@ function InfoIcon() {
 export function ScoringGuide() {
   return (
     <section
-      className="rounded-lg border border-secondary-border bg-background px-3 py-2 shadow-sm sm:px-4 sm:py-2.5"
+      className="rounded-lg border border-secondary-border bg-surface-blue-50 px-3 py-2 sm:px-4 sm:py-2.5"
       aria-label="How points work"
     >
-      <p className="font-semibold text-xs text-primary-600 sm:text-sm">How points work</p>
+      <p className="font-semibold text-xs text-primary-dark sm:text-sm">How points work</p>
 
       <ul className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-4 sm:gap-x-4">
         {RULES.map((rule) => {
@@ -95,3 +96,4 @@ export function ScoringGuide() {
     </section>
   );
 }
+

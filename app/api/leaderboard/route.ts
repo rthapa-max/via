@@ -1,6 +1,31 @@
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+const PAGE_SIZE = 1000;
+
+async function fetchAllRows<T>(
+  supabase: ReturnType<typeof getSupabaseServerClient>,
+  table: string,
+  select: string,
+): Promise<T[]> {
+  const out: T[] = [];
+  for (let offset = 0; ; offset += PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from(table)
+      .select(select)
+      .range(offset, offset + PAGE_SIZE - 1);
+
+    if (error) throw error;
+    const rows = (data ?? []) as T[];
+    out.push(...rows);
+    if (rows.length < PAGE_SIZE) break;
+  }
+  return out;
+}
+
 export async function GET() {
   let supabase;
   try {
@@ -12,56 +37,56 @@ export async function GET() {
     );
   }
 
-  const { data: users, error: usersError } = await supabase
-    .from("app_users")
-    .select("id,email,username,favorite_team")
-    // .limit(200);
-  if (usersError) {
-    return NextResponse.json({ ok: false, message: usersError.message }, { status: 500 });
-  }
-
-  const [{ data: pointRows, error: pointsError }, { data: predictionRows, error: predictionsError }] =
-    await Promise.all([
-      supabase.from("prediction_points").select("user_id,points"),
-      supabase.from("predictions").select("user_id"),
+  try {
+    const [users, pointRows, predictionRows] = await Promise.all([
+      fetchAllRows<{
+        id: string;
+        email: string | null;
+        username: string | null;
+        favorite_team: string | null;
+      }>(supabase, "app_users", "id,email,username,favorite_team"),
+      fetchAllRows<{ user_id: string; points: number | null }>(
+        supabase,
+        "prediction_points",
+        "user_id,points",
+      ),
+      fetchAllRows<{ user_id: string }>(supabase, "predictions", "user_id"),
     ]);
 
-  if (pointsError) {
-    return NextResponse.json({ ok: false, message: pointsError.message }, { status: 500 });
+    const pointsByUser = new Map<string, number>();
+    for (const row of pointRows) {
+      if (row.points == null) continue;
+      pointsByUser.set(row.user_id, (pointsByUser.get(row.user_id) ?? 0) + Number(row.points));
+    }
+
+    const predictionsByUser = new Map<string, number>();
+    for (const row of predictionRows) {
+      predictionsByUser.set(row.user_id, (predictionsByUser.get(row.user_id) ?? 0) + 1);
+    }
+
+    const rows = users
+      .map((user) => ({
+        id: user.id,
+        email: user.email ?? "",
+        username: user.username ?? null,
+        favorite_team: user.favorite_team ?? null,
+        predictions: predictionsByUser.get(user.id) ?? 0,
+        points: pointsByUser.get(user.id) ?? 0,
+      }))
+      .sort((a, b) => {
+        const byPoints = b.points - a.points;
+        if (byPoints !== 0) return byPoints;
+        const nameA = a.username ?? a.email;
+        const nameB = b.username ?? b.email;
+        return nameA.localeCompare(nameB);
+      });
+
+    return NextResponse.json({ ok: true, rows });
+  } catch (e) {
+    return NextResponse.json(
+      { ok: false, message: e instanceof Error ? e.message : "Failed to load leaderboard." },
+      { status: 500 },
+    );
   }
 
-  if (predictionsError) {
-    return NextResponse.json({ ok: false, message: predictionsError.message }, { status: 500 });
-  }
-
-  const pointsByUser = new Map<string, number>();
-  for (const row of pointRows ?? []) {
-    if (row.points == null) continue;
-    const userId = row.user_id as string;
-    pointsByUser.set(userId, (pointsByUser.get(userId) ?? 0) + Number(row.points));
-  }
-
-  const predictionsByUser = new Map<string, number>();
-  for (const row of predictionRows ?? []) {
-    const userId = row.user_id as string;
-    predictionsByUser.set(userId, (predictionsByUser.get(userId) ?? 0) + 1);
-  }
-
-  const rows = (users ?? [])
-    .map((user) => ({
-      email: user.email as string,
-      username: (user.username as string | null) ?? null,
-      favorite_team: (user.favorite_team as string | null) ?? null,
-      predictions: predictionsByUser.get(user.id as string) ?? 0,
-      points: pointsByUser.get(user.id as string) ?? 0,
-    }))
-    .sort((a, b) => {
-      const byPoints = b.points - a.points;
-      if (byPoints !== 0) return byPoints;
-      const nameA = a.username ?? a.email;
-      const nameB = b.username ?? b.email;
-      return nameA.localeCompare(nameB);
-    });
-
-  return NextResponse.json({ ok: true, rows });
 }

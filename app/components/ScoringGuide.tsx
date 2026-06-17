@@ -1,28 +1,28 @@
 const RULES = [
   {
     points: 3,
-    label: "Exact score or draw",
-    example:
-      "Team A vs B — pick 2-1 and result is 2-1, or pick 1-1 draw and result is 1-1.",
+    label: "Exact score",
+    example: "Your prediction matches the final score exactly (including 0–0 or 1–1).",
     tone: "primary" as const,
   },
   {
     points: 2,
-    label: "Correct winner",
-    example: "Team A vs B — pick 3-2, result 2-1 (right winner, wrong goals).",
+    label: "Correct outcome",
+    example:
+      "Correct winner or draw, but wrong exact score (e.g. pick 3–2, result 2–1; pick 0–0, result 1–1).",
     tone: "yellow" as const,
   },
   {
     points: 1,
     label: "Participated",
     example:
-      "Team A vs B — pick 2-0, result 1-2 (wrong score and wrong winner) still earns 1 pt.",
+      "Any submitted prediction earns 1 point even if outcome is wrong. Leaving both fields blank and saving counts as 0–0.",
     tone: "surface" as const,
   },
   {
     points: 0,
     label: "No prediction",
-    example: "No pick submitted for the match.",
+    example: "No prediction submitted before the prediction window closes.",
     tone: "muted" as const,
   },
 ] as const;

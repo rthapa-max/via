@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import vianetLogo from "@/app/image.png";
 import { FavoriteTeamPicker } from "@/app/components/FavoriteTeamPicker";
+import { PoweredByMinistore } from "@/app/components/PoweredByMinistore";
 import { PredictionHistoryButton } from "@/app/components/PredictionHistoryButton";
 import { useAuth } from "@/app/components/AuthProvider";
 
@@ -66,6 +67,7 @@ export function TopBar() {
           </button>
         </div>
       </div>
+      <PoweredByMinistore />
     </header>
   );
 }

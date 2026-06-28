@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/app/components/AuthProvider";
 import { compareByDateAndTime } from "@/lib/fixtures";
+import { isKnockoutStage, isParticipantTeam } from "@/lib/teams";
 
 type FixtureRow = {
   id: string;
@@ -10,6 +11,7 @@ type FixtureRow = {
   time: string;
   home: string;
   away: string;
+  stage: string | null;
   status: "scheduled" | "pending" | "finished";
   result_home_score: number | null;
   result_away_score: number | null;
@@ -24,17 +26,24 @@ function normalizeScore(raw: string) {
 function AdminResultRow({
   row,
   busy,
+  availableTeams,
   onSaveStatus,
   onComplete,
+  onUpdateTeams,
 }: {
   row: FixtureRow;
   busy: boolean;
+  availableTeams: string[];
   onSaveStatus: (args: { id: string; status: "scheduled" | "pending" }) => void;
   onComplete: (args: { id: string; hs: string; as: string }) => void;
+  onUpdateTeams: (args: { id: string; home: string; away: string }) => void;
 }) {
   const isFinished = row.status === "finished";
+  const isKnockout = isKnockoutStage(row.stage);
   const [hs, setHs] = useState(row.result_home_score === null ? "" : String(row.result_home_score));
   const [as, setAs] = useState(row.result_away_score === null ? "" : String(row.result_away_score));
+  const [homeTeam, setHomeTeam] = useState(row.home);
+  const [awayTeam, setAwayTeam] = useState(row.away);
   const [status, setStatus] = useState<"scheduled" | "pending">(
     row.status === "pending" ? "pending" : "scheduled",
   );
@@ -42,15 +51,80 @@ function AdminResultRow({
   useEffect(() => {
     setHs(row.result_home_score === null ? "" : String(row.result_home_score));
     setAs(row.result_away_score === null ? "" : String(row.result_away_score));
+    setHomeTeam(row.home);
+    setAwayTeam(row.away);
     setStatus(row.status === "pending" ? "pending" : "scheduled");
-  }, [row.id, row.result_away_score, row.result_home_score, row.status]);
+  }, [row.away, row.home, row.id, row.result_away_score, row.result_home_score, row.status]);
+
+  const teamsDirty = homeTeam !== row.home || awayTeam !== row.away;
+  const homeSelectValue = isParticipantTeam(homeTeam) ? homeTeam : "";
+  const awaySelectValue = isParticipantTeam(awayTeam) ? awayTeam : "";
+  const canSaveTeams =
+    teamsDirty &&
+    isParticipantTeam(homeTeam) &&
+    isParticipantTeam(awayTeam) &&
+    availableTeams.includes(homeTeam) &&
+    availableTeams.includes(awayTeam);
 
   return (
     <tr className="align-top">
       <td className="px-4 py-2">
-        <div className="font-normal text-zinc-900 dark:text-zinc-50">
-          {row.home} vs {row.away}
-        </div>
+        {isKnockout ? (
+          <div className="space-y-2">
+            {row.stage ? (
+              <div className="text-[11px] font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                {row.stage}
+              </div>
+            ) : null}
+            <div className="grid max-w-xs grid-cols-[1fr_auto_1fr] items-center gap-2">
+              <select
+                value={homeSelectValue}
+                onChange={(e) => setHomeTeam(e.target.value)}
+                disabled={busy || availableTeams.length === 0}
+                className="h-8 w-full min-w-0 rounded-xl border border-zinc-200 bg-white px-2 text-xs dark:border-white/10 dark:bg-zinc-950"
+              >
+                <option value="">
+                  {isParticipantTeam(row.home) ? "Select home team" : row.home}
+                </option>
+                {availableTeams.map((team) => (
+                  <option key={team} value={team}>
+                    {team}
+                  </option>
+                ))}
+              </select>
+              <div className="text-center text-zinc-500 dark:text-zinc-400">vs</div>
+              <select
+                value={awaySelectValue}
+                onChange={(e) => setAwayTeam(e.target.value)}
+                disabled={busy || availableTeams.length === 0}
+                className="h-8 w-full min-w-0 rounded-xl border border-zinc-200 bg-white px-2 text-xs dark:border-white/10 dark:bg-zinc-950"
+              >
+                <option value="">
+                  {isParticipantTeam(row.away) ? "Select away team" : row.away}
+                </option>
+                {availableTeams.map((team) => (
+                  <option key={team} value={team}>
+                    {team}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {teamsDirty ? (
+              <button
+                type="button"
+                onClick={() => onUpdateTeams({ id: row.id, home: homeTeam, away: awayTeam })}
+                disabled={busy || !canSaveTeams}
+                className="inline-flex h-8 items-center justify-center rounded-full border border-zinc-200 bg-white px-3 text-xs text-zinc-800 hover:bg-zinc-50 disabled:opacity-60 dark:border-white/10 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-white/5"
+              >
+                {busy ? "Saving…" : "Save teams"}
+              </button>
+            ) : null}
+          </div>
+        ) : (
+          <div className="font-normal text-zinc-900 dark:text-zinc-50">
+            {row.home} vs {row.away}
+          </div>
+        )}
       </td>
       <td className="px-4 py-2 text-zinc-600 dark:text-zinc-400">
         {row.date_label} • {row.time}
@@ -123,6 +197,7 @@ function AdminResultRow({
 export function AdminResults() {
   const { user, ready } = useAuth();
   const [rows, setRows] = useState<FixtureRow[]>([]);
+  const [availableTeams, setAvailableTeams] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -131,17 +206,27 @@ export function AdminResults() {
   useEffect(() => {
     async function load() {
       setLoading(true);
-      const res = await fetch("/api/fixtures", { cache: "no-store" }).catch(() => null);
-      const json = (await res?.json().catch(() => null)) as
+      const [fixturesRes, teamsRes] = await Promise.all([
+        fetch("/api/fixtures", { cache: "no-store" }).catch(() => null),
+        fetch("/api/teams", { cache: "no-store" }).catch(() => null),
+      ]);
+
+      const fixturesJson = (await fixturesRes?.json().catch(() => null)) as
         | { ok: true; fixtures: FixtureRow[] }
         | { ok: false; message: string }
         | null;
-      if (!res || !json || !json.ok) {
+      const teamsJson = (await teamsRes?.json().catch(() => null)) as
+        | { ok: true; teams: string[] }
+        | { ok: false; message: string }
+        | null;
+
+      if (!fixturesRes || !fixturesJson || !fixturesJson.ok) {
         setRows([]);
-        setLoading(false);
-        return;
+      } else {
+        setRows(fixturesJson.fixtures ?? []);
       }
-      setRows(json.fixtures ?? []);
+
+      setAvailableTeams(teamsJson?.ok ? (teamsJson.teams ?? []) : []);
       setLoading(false);
     }
     void load();
@@ -238,6 +323,34 @@ export function AdminResults() {
     setBusyId(null);
   }
 
+  async function updateTeams(id: string, home: string, away: string) {
+    setErr(null);
+    setBusyId(id);
+    const res = await fetch("/api/admin/fixture-teams", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ fixtureId: id, home, away }),
+    }).catch(() => null);
+
+    const json = (await res?.json().catch(() => null)) as
+      | { ok: true; fixture: { home: string; away: string } }
+      | { ok: false; message: string }
+      | null;
+
+    if (!res || !json || !json.ok) {
+      setErr(json && "message" in json ? json.message : "Failed to update teams.");
+      setBusyId(null);
+      return;
+    }
+
+    setRows((prev) =>
+      prev.map((r) =>
+        r.id !== id ? r : { ...r, home: json.fixture.home, away: json.fixture.away },
+      ),
+    );
+    setBusyId(null);
+  }
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3">
@@ -275,8 +388,10 @@ export function AdminResults() {
                   key={r.id}
                   row={r}
                   busy={busyId === r.id}
+                  availableTeams={availableTeams}
                   onSaveStatus={({ id, status }) => void saveStatus(id, status)}
                   onComplete={({ id, hs, as }) => void complete(id, hs, as)}
+                  onUpdateTeams={({ id, home, away }) => void updateTeams(id, home, away)}
                 />
               ))}
             </tbody>

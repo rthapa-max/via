@@ -9,6 +9,7 @@ import {
   kickoffMsFromFixtureRow,
 } from "@/lib/kickoff";
 import { predictionPoints, predictionPointsClass } from "@/lib/scoring";
+import { isKnockoutStage } from "@/lib/teams";
 import { useAuth } from "@/app/components/AuthProvider";
 import { FixturePredictionsButton } from "@/app/components/FixturePredictionsButton";
 
@@ -287,6 +288,8 @@ export function FixtureCard({ match }: { match: FixtureMatch }) {
     );
   }, [hasResult, prediction, match.resultHomeScore, match.resultAwayScore]);
 
+  const isKnockout = isKnockoutStage(match.stage);
+
   return (
     <div className="relative rounded-2xl border border-secondary-border bg-background p-5 shadow-sm sm:p-6">
       {hasResult ? (
@@ -298,6 +301,13 @@ export function FixtureCard({ match }: { match: FixtureMatch }) {
         </div>
       ) : null}
       <div className="flex flex-col gap-5 sm:gap-6">
+        {isKnockout && match.stage ? (
+          <div className="text-center">
+            <span className="inline-flex rounded-full bg-secondary-50 px-3 py-1 text-xs font-medium uppercase tracking-wide text-primary-text">
+              {match.stage}
+            </span>
+          </div>
+        ) : null}
         <div className="flex flex-col items-center gap-4 sm:gap-5">
           <div className="flex items-center justify-center gap-8 sm:gap-12">
             <TeamWithFlag team={match.home} />
@@ -391,8 +401,7 @@ export function FixtureCard({ match }: { match: FixtureMatch }) {
             ) : (
               <span className="font-normal text-primary-text">{kickoffTimeLabel}</span>
             )}
-            {match.stage ? <span>{match.stage}</span> : null}
-            {match.group ? <span>{match.group}</span> : null}
+            {!isKnockout && match.group ? <span>{match.group}</span> : null}
           </div>
 
           {location ? (

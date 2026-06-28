@@ -10,6 +10,12 @@ export function isParticipantTeam(name: string) {
   return true;
 }
 
+export function isKnockoutStage(stage: string | null | undefined) {
+  const label = stage?.trim();
+  if (!label) return false;
+  return label.toLowerCase() !== "first stage";
+}
+
 export function sortTeams(teams: string[]) {
   return [...teams].sort((a, b) => a.localeCompare(b));
 }

@@ -1,6 +1,7 @@
 import { TopBar } from "@/app/components/TopBar";
 import { AdminDeleteUser } from "@/app/components/admin/AdminDeleteUser";
 import { AdminPasswordReset } from "@/app/components/admin/AdminPasswordReset";
+import { AdminPointsExport } from "@/app/components/admin/AdminPointsExport";
 import { AdminResults } from "@/app/components/admin/AdminResults";
 import { RequireAuth } from "@/app/components/RequireAuth";
 
@@ -17,7 +18,8 @@ export default function AdminPage() {
                 Manage match results and user accounts.
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-start justify-end gap-2">
+              <AdminPointsExport />
               <AdminPasswordReset />
               <AdminDeleteUser />
             </div>

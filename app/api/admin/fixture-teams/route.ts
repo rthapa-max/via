@@ -30,10 +30,10 @@ export async function PUT(req: Request) {
   const home = body?.home !== undefined ? normalizeTeamName(body.home) : undefined;
   const away = body?.away !== undefined ? normalizeTeamName(body.away) : undefined;
 
-  if (body?.home !== undefined && home === null) {
+  if (home === null) {
     return NextResponse.json({ ok: false, message: "Invalid home team name." }, { status: 400 });
   }
-  if (body?.away !== undefined && away === null) {
+  if (away === null) {
     return NextResponse.json({ ok: false, message: "Invalid away team name." }, { status: 400 });
   }
   if (home === undefined && away === undefined) {

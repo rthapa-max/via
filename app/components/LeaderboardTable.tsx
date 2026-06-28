@@ -79,7 +79,7 @@ export function LeaderboardTable() {
       <div className="flex items-center justify-between gap-3 border-b border-secondary-border bg-primary-600 px-5 py-4 sm:px-6">
         <h2 className="font-semibold text-base text-primary-foreground">Leaderboard</h2>
         <span className="text-sm text-primary-100">
-          {loading ? "Loading…" : `${rows.length} player${rows.length === 1 ? "" : "s"}`}
+          {loading ? "Loading…" : `${rows.length} player${rows.length === 1 ? "" : "s"} · knockout only`}
         </span>
       </div>
 

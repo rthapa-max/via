@@ -28,6 +28,23 @@ const RULES = [
   },
 ] as const;
 
+const KNOCKOUT_BONUS_RULES = [
+  {
+    points: "+1",
+    label: "Extra time winner",
+    example:
+      "Knockout only. Predict a draw at 90 minutes, then pick the extra time winner. If that team wins in extra time, you get +1 bonus point.",
+    tone: "primary" as const,
+  },
+  {
+    points: "+1",
+    label: "Penalties winner",
+    example:
+      "Knockout only. Predict a draw at 90 minutes, pick Draw for extra time, then pick the penalties winner. If that team wins on penalties, you get +1 bonus point.",
+    tone: "primary" as const,
+  },
+] as const;
+
 const badgeClass = {
   primary: "bg-primary-100 text-primary-700 ring-primary-200",
   yellow: "bg-yellow-300 text-brown-500 ring-yellow-400",
@@ -49,6 +66,52 @@ function InfoIcon() {
   );
 }
 
+function ScoringRuleItem({
+  id,
+  points,
+  label,
+  example,
+  tone,
+}: {
+  id: string;
+  points: string | number;
+  label: string;
+  example: string;
+  tone: keyof typeof badgeClass;
+}) {
+  return (
+    <li className="group relative min-w-0">
+      <button
+        type="button"
+        className="flex w-full min-w-0 items-center gap-1 text-left text-xs text-primary-text"
+        aria-describedby={id}
+        title={example}
+      >
+        <span
+          className={`inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1 font-semibold text-[10px] tabular-nums ring-1 ${badgeClass[tone]}`}
+        >
+          {points}
+        </span>
+        <span className="truncate font-medium underline decoration-secondary-border decoration-dotted underline-offset-2">
+          {label}
+        </span>
+        <span className="shrink-0 text-tertiary-400">
+          <InfoIcon />
+        </span>
+      </button>
+
+      <div
+        id={id}
+        role="tooltip"
+        className="pointer-events-none absolute bottom-full left-0 z-50 mb-1.5 hidden w-52 rounded-md border border-secondary-border bg-background px-2.5 py-2 text-[11px] leading-snug text-secondary-text shadow-md group-hover:block group-focus-within:block sm:w-56"
+      >
+        <span className="font-medium text-primary-text">Example: </span>
+        {example}
+      </div>
+    </li>
+  );
+}
+
 export function ScoringGuide() {
   return (
     <section
@@ -58,41 +121,36 @@ export function ScoringGuide() {
       <p className="font-semibold text-xs text-primary-dark sm:text-sm">How points work</p>
 
       <ul className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-4 sm:gap-x-4">
-        {RULES.map((rule) => {
-          const tipId = `scoring-tip-${rule.points}`;
-          return (
-            <li key={rule.label} className="group relative min-w-0">
-              <button
-                type="button"
-                className="flex w-full min-w-0 items-center gap-1 text-left text-xs text-primary-text"
-                aria-describedby={tipId}
-                title={rule.example}
-              >
-                <span
-                  className={`inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1 font-semibold text-[10px] tabular-nums ring-1 ${badgeClass[rule.tone]}`}
-                >
-                  {rule.points}
-                </span>
-                <span className="truncate font-medium underline decoration-secondary-border decoration-dotted underline-offset-2">
-                  {rule.label}
-                </span>
-                <span className="shrink-0 text-tertiary-400">
-                  <InfoIcon />
-                </span>
-              </button>
-
-              <div
-                id={tipId}
-                role="tooltip"
-                className="pointer-events-none absolute bottom-full left-0 z-50 mb-1.5 hidden w-52 rounded-md border border-secondary-border bg-background px-2.5 py-2 text-[11px] leading-snug text-secondary-text shadow-md group-hover:block group-focus-within:block sm:w-56"
-              >
-                <span className="font-medium text-primary-text">Example: </span>
-                {rule.example}
-              </div>
-            </li>
-          );
-        })}
+        {RULES.map((rule) => (
+          <ScoringRuleItem
+            key={rule.label}
+            id={`scoring-tip-${rule.points}`}
+            points={rule.points}
+            label={rule.label}
+            example={rule.example}
+            tone={rule.tone}
+          />
+        ))}
       </ul>
+
+      <div className="mt-3 border-t border-secondary-border/70 pt-2.5">
+        <p className="text-xs font-semibold text-primary-dark sm:text-sm">Knockout bonus points</p>
+        <p className="mt-0.5 text-[11px] text-secondary-text">
+          Group stage uses the rules above only. In knockout matches, predict a draw at 90 minutes to unlock bonus points.
+        </p>
+        <ul className="mt-1.5 grid grid-cols-1 gap-y-2 sm:grid-cols-2 sm:gap-x-4">
+          {KNOCKOUT_BONUS_RULES.map((rule) => (
+            <ScoringRuleItem
+              key={rule.label}
+              id={`scoring-tip-knockout-${rule.label.toLowerCase().replace(/\s+/g, "-")}`}
+              points={rule.points}
+              label={rule.label}
+              example={rule.example}
+              tone={rule.tone}
+            />
+          ))}
+        </ul>
+      </div>
     </section>
   );
 }

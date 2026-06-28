@@ -227,6 +227,7 @@ select
   f.status as fixture_status,
   f.result_home_score,
   f.result_away_score,
+  f.stage as fixture_stage,
   case
     when f.status <> 'finished' then null
     else
@@ -278,6 +279,7 @@ select
   coalesce(sum(pp.points), 0) as points
 from public.app_users u
 left join public.prediction_points pp on pp.user_id = u.id
+  and coalesce(lower(trim(pp.fixture_stage)), 'first stage') <> 'first stage'
 group by u.email, u.username, u.favorite_team
 order by points desc, correct desc, predicted desc, coalesce(u.username, u.email) asc;
 

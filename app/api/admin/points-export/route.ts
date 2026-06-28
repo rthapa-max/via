@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
+import { isKnockoutStage } from "@/lib/teams";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 export const dynamic = "force-dynamic";
@@ -50,22 +51,27 @@ export async function GET() {
   }
 
   try {
-    const [users, pointRows] = await Promise.all([
+    const [users, pointRows, fixtures] = await Promise.all([
       fetchAllRows<{
         id: string;
         email: string | null;
         username: string | null;
       }>(supabase, "app_users", "id,email,username"),
-      fetchAllRows<{ user_id: string; points: number | null }>(
+      fetchAllRows<{ user_id: string; fixture_id: string; points: number | null }>(
         supabase,
         "prediction_points",
-        "user_id,points",
+        "user_id,fixture_id,points",
       ),
+      fetchAllRows<{ id: string; stage: string | null }>(supabase, "fixtures", "id,stage"),
     ]);
+
+    const knockoutFixtureIds = new Set(
+      fixtures.filter((fixture) => isKnockoutStage(fixture.stage)).map((fixture) => fixture.id),
+    );
 
     const pointsByUser = new Map<string, number>();
     for (const row of pointRows) {
-      if (row.points == null) continue;
+      if (row.points == null || !knockoutFixtureIds.has(row.fixture_id)) continue;
       pointsByUser.set(row.user_id, (pointsByUser.get(row.user_id) ?? 0) + Number(row.points));
     }
 

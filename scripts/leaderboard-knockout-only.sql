@@ -1,48 +1,5 @@
--- Knockout scoring: 90-minute score + optional ET/penalty bonus points.
--- Run in Supabase SQL editor on existing databases.
-
-alter table public.fixtures
-  add column if not exists result_went_to_extra_time boolean not null default false;
-
-alter table public.fixtures
-  add column if not exists result_et_winner text;
-
-alter table public.fixtures
-  add column if not exists result_pen_winner text;
-
-alter table public.fixtures
-  drop constraint if exists fixtures_result_et_winner_check;
-
-alter table public.fixtures
-  add constraint fixtures_result_et_winner_check
-  check (result_et_winner is null or result_et_winner in ('home', 'away'));
-
-alter table public.fixtures
-  drop constraint if exists fixtures_result_pen_winner_check;
-
-alter table public.fixtures
-  add constraint fixtures_result_pen_winner_check
-  check (result_pen_winner is null or result_pen_winner in ('home', 'away'));
-
-alter table public.predictions
-  add column if not exists et_winner text;
-
-alter table public.predictions
-  add column if not exists pen_winner text;
-
-alter table public.predictions
-  drop constraint if exists predictions_et_winner_check;
-
-alter table public.predictions
-  add constraint predictions_et_winner_check
-  check (et_winner is null or et_winner in ('home', 'away'));
-
-alter table public.predictions
-  drop constraint if exists predictions_pen_winner_check;
-
-alter table public.predictions
-  add constraint predictions_pen_winner_check
-  check (pen_winner is null or pen_winner in ('home', 'away'));
+-- Leaderboard counts knockout fixture points only.
+-- Run in Supabase SQL editor if prediction_points already exists.
 
 drop view if exists public.leaderboard;
 drop view if exists public.prediction_points;

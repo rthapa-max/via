@@ -23,6 +23,70 @@ function normalizeScore(raw: string) {
   return digits.replace(/^0+(?=\d)/, "");
 }
 
+function pickButtonClass(active: boolean, disabled?: boolean) {
+  return [
+    "min-w-0 truncate rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors",
+    active
+      ? "border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-zinc-950"
+      : "border-zinc-200 bg-white text-zinc-800 hover:bg-zinc-50 dark:border-white/10 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-white/5",
+    disabled ? "cursor-not-allowed opacity-60" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function OutcomePicker({
+  label,
+  homeLabel,
+  awayLabel,
+  value,
+  onChange,
+  disabled,
+  includeDraw = false,
+}: {
+  label: string;
+  homeLabel: string;
+  awayLabel: string;
+  value: "home" | "away" | "draw" | "";
+  onChange: (next: "home" | "away" | "draw") => void;
+  disabled?: boolean;
+  includeDraw?: boolean;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <p className="text-[11px] font-medium text-zinc-600 dark:text-zinc-300">{label}</p>
+      <div className={includeDraw ? "grid grid-cols-3 gap-1.5" : "grid grid-cols-2 gap-1.5"}>
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => onChange("home")}
+          className={pickButtonClass(value === "home", disabled)}
+        >
+          {homeLabel}
+        </button>
+        {includeDraw ? (
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => onChange("draw")}
+            className={pickButtonClass(value === "draw", disabled)}
+          >
+            Draw
+          </button>
+        ) : null}
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => onChange("away")}
+          className={pickButtonClass(value === "away", disabled)}
+        >
+          {awayLabel}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function AdminResultRow({
   row,
   busy,
@@ -35,7 +99,13 @@ function AdminResultRow({
   busy: boolean;
   availableTeams: string[];
   onSaveStatus: (args: { id: string; status: "scheduled" | "pending" }) => void;
-  onComplete: (args: { id: string; hs: string; as: string }) => void;
+  onComplete: (args: {
+    id: string;
+    hs: string;
+    as: string;
+    etWinner?: "home" | "away" | null;
+    penWinner?: "home" | "away" | null;
+  }) => void;
   onUpdateTeams: (args: { id: string; home: string; away: string }) => void;
 }) {
   const isFinished = row.status === "finished";
@@ -47,6 +117,8 @@ function AdminResultRow({
   const [status, setStatus] = useState<"scheduled" | "pending">(
     row.status === "pending" ? "pending" : "scheduled",
   );
+  const [etWinner, setEtWinner] = useState<"home" | "away" | "draw" | "">("");
+  const [penWinner, setPenWinner] = useState<"home" | "away" | "">("");
 
   useEffect(() => {
     setHs(row.result_home_score === null ? "" : String(row.result_home_score));
@@ -54,7 +126,24 @@ function AdminResultRow({
     setHomeTeam(row.home);
     setAwayTeam(row.away);
     setStatus(row.status === "pending" ? "pending" : "scheduled");
+    setEtWinner("");
+    setPenWinner("");
   }, [row.away, row.home, row.id, row.result_away_score, row.result_home_score, row.status]);
+
+  const hsNum = hs === "" ? NaN : Number(hs);
+  const asNum = as === "" ? NaN : Number(as);
+  const knockoutDrawInput =
+    isKnockout && Number.isFinite(hsNum) && Number.isFinite(asNum) && hsNum === asNum;
+  const canCompleteKnockoutDraw =
+    knockoutDrawInput &&
+    (etWinner === "home" ||
+      etWinner === "away" ||
+      (etWinner === "draw" && (penWinner === "home" || penWinner === "away")));
+
+  function handleEtPick(next: "home" | "away" | "draw") {
+    setEtWinner(next);
+    if (next !== "draw") setPenWinner("");
+  }
 
   const teamsDirty = homeTeam !== row.home || awayTeam !== row.away;
   const homeSelectValue = isParticipantTeam(homeTeam) ? homeTeam : "";
@@ -146,24 +235,52 @@ function AdminResultRow({
         )}
       </td>
       <td className="px-4 py-2">
-        <div className="grid grid-cols-[90px_20px_90px] items-center gap-2">
-          <input
-            value={hs}
-            onChange={(e) => setHs(normalizeScore(e.target.value))}
-            placeholder="0"
-            inputMode="numeric"
-            disabled={isFinished}
-            className="h-8 rounded-xl border border-zinc-200 bg-white px-2 text-xs disabled:opacity-60 dark:border-white/10 dark:bg-zinc-950"
-          />
-          <div className="text-center text-zinc-500 dark:text-zinc-400">-</div>
-          <input
-            value={as}
-            onChange={(e) => setAs(normalizeScore(e.target.value))}
-            placeholder="0"
-            inputMode="numeric"
-            disabled={isFinished}
-            className="h-8 rounded-xl border border-zinc-200 bg-white px-2 text-xs disabled:opacity-60 dark:border-white/10 dark:bg-zinc-950"
-          />
+        <div className="space-y-2">
+          <div className="grid grid-cols-[90px_20px_90px] items-center gap-2">
+            <input
+              value={hs}
+              onChange={(e) => setHs(normalizeScore(e.target.value))}
+              placeholder="0"
+              inputMode="numeric"
+              disabled={isFinished}
+              className="h-8 rounded-xl border border-zinc-200 bg-white px-2 text-xs disabled:opacity-60 dark:border-white/10 dark:bg-zinc-950"
+            />
+            <div className="text-center text-zinc-500 dark:text-zinc-400">-</div>
+            <input
+              value={as}
+              onChange={(e) => setAs(normalizeScore(e.target.value))}
+              placeholder="0"
+              inputMode="numeric"
+              disabled={isFinished}
+              className="h-8 rounded-xl border border-zinc-200 bg-white px-2 text-xs disabled:opacity-60 dark:border-white/10 dark:bg-zinc-950"
+            />
+          </div>
+          {isKnockout && !isFinished ? (
+            <p className="text-[11px] text-zinc-500 dark:text-zinc-400">90-minute score</p>
+          ) : null}
+          {knockoutDrawInput && !isFinished ? (
+            <div className="max-w-xs space-y-2.5 rounded-xl border border-zinc-200 p-2.5 dark:border-white/10">
+              <OutcomePicker
+                label="Extra time winner"
+                homeLabel={row.home}
+                awayLabel={row.away}
+                value={etWinner}
+                onChange={handleEtPick}
+                disabled={busy}
+                includeDraw
+              />
+              {etWinner === "draw" ? (
+                <OutcomePicker
+                  label="Penalties winner"
+                  homeLabel={row.home}
+                  awayLabel={row.away}
+                  value={penWinner}
+                  onChange={(next) => setPenWinner(next as "home" | "away")}
+                  disabled={busy}
+                />
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </td>
       <td className="px-4 py-2">
@@ -181,8 +298,16 @@ function AdminResultRow({
           {!isFinished ? (
             <button
               type="button"
-              onClick={() => onComplete({ id: row.id, hs, as })}
-              disabled={busy}
+              onClick={() =>
+                onComplete({
+                  id: row.id,
+                  hs,
+                  as,
+                  etWinner: etWinner === "home" || etWinner === "away" ? etWinner : null,
+                  penWinner: etWinner === "draw" ? penWinner || null : null,
+                })
+              }
+              disabled={busy || (knockoutDrawInput && !canCompleteKnockoutDraw)}
               className="inline-flex h-8 items-center justify-center rounded-full bg-zinc-950 px-3 text-xs text-white hover:bg-zinc-800 disabled:opacity-60 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
             >
               {busy ? "Saving…" : "Complete"}
@@ -274,7 +399,13 @@ export function AdminResults() {
     setBusyId(null);
   }
 
-  async function complete(id: string, hs: string, as: string) {
+  async function complete(
+    id: string,
+    hs: string,
+    as: string,
+    etWinner?: "home" | "away" | null,
+    penWinner?: "home" | "away" | null,
+  ) {
     setErr(null);
     setBusyId(id);
     const homeScore = hs === "" ? NaN : Number(hs);
@@ -293,6 +424,8 @@ export function AdminResults() {
         complete: true,
         homeScore: Math.floor(homeScore),
         awayScore: Math.floor(awayScore),
+        etWinner: etWinner ?? null,
+        penWinner: penWinner ?? null,
       }),
     }).catch(() => null);
 
@@ -390,7 +523,9 @@ export function AdminResults() {
                   busy={busyId === r.id}
                   availableTeams={availableTeams}
                   onSaveStatus={({ id, status }) => void saveStatus(id, status)}
-                  onComplete={({ id, hs, as }) => void complete(id, hs, as)}
+                  onComplete={({ id, hs, as, etWinner, penWinner }) =>
+                    void complete(id, hs, as, etWinner, penWinner)
+                  }
                   onUpdateTeams={({ id, home, away }) => void updateTeams(id, home, away)}
                 />
               ))}

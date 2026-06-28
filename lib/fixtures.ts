@@ -14,7 +14,12 @@ export type FixtureMatch = {
   kickoffAt?: string;
   resultHomeScore?: number | null;
   resultAwayScore?: number | null;
+  resultWentToExtraTime?: boolean;
+  resultEtWinner?: SidePick | null;
+  resultPenWinner?: SidePick | null;
 };
+
+export type SidePick = "home" | "away";
 
 const MONTHS: Record<string, number> = {
   january: 0,

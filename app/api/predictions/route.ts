@@ -1,8 +1,9 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getSessionCookieName, verifySession } from "@/lib/auth";
-import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { getPredictionWindowState, kickoffMsFromFixtureRow } from "@/lib/kickoff";
+import { isKnockoutStage } from "@/lib/teams";
+import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 async function requireUser() {
   const jar = await cookies();
@@ -34,6 +35,11 @@ async function requireUser() {
   }
 }
 
+function normalizeSide(raw: unknown) {
+  if (raw === "home" || raw === "away") return raw;
+  return null;
+}
+
 export async function GET(req: Request) {
   const user = await requireUser();
   if (!user) return NextResponse.json({ ok: false, message: "Unauthorized" }, { status: 401 });
@@ -53,7 +59,7 @@ export async function GET(req: Request) {
   }
   const { data, error } = await supabase
     .from("predictions")
-    .select("winner,home_score,away_score,updated_at")
+    .select("winner,home_score,away_score,et_winner,pen_winner,updated_at")
     .eq("user_id", user.id)
     .eq("fixture_id", fixtureId)
     .maybeSingle();
@@ -72,6 +78,8 @@ export async function PUT(req: Request) {
         winner?: "home" | "away" | "draw";
         homeScore?: number;
         awayScore?: number;
+        etWinner?: "home" | "away" | null;
+        penWinner?: "home" | "away" | null;
       }
     | null;
 
@@ -79,12 +87,20 @@ export async function PUT(req: Request) {
   const winner = body?.winner;
   const homeScore = body?.homeScore;
   const awayScore = body?.awayScore;
+  const etWinner = normalizeSide(body?.etWinner);
+  const penWinner = normalizeSide(body?.penWinner);
 
   if (!fixtureId) return NextResponse.json({ ok: false, message: "Missing fixtureId" }, { status: 400 });
   if (winner !== "home" && winner !== "away" && winner !== "draw")
     return NextResponse.json({ ok: false, message: "Invalid winner" }, { status: 400 });
   if (!Number.isFinite(homeScore) || !Number.isFinite(awayScore) || homeScore! < 0 || awayScore! < 0)
     return NextResponse.json({ ok: false, message: "Invalid score" }, { status: 400 });
+  if (body?.etWinner !== undefined && body.etWinner !== null && etWinner === null) {
+    return NextResponse.json({ ok: false, message: "Invalid extra time winner." }, { status: 400 });
+  }
+  if (body?.penWinner !== undefined && body.penWinner !== null && penWinner === null) {
+    return NextResponse.json({ ok: false, message: "Invalid penalty winner." }, { status: 400 });
+  }
 
   let supabase;
   try {
@@ -98,7 +114,7 @@ export async function PUT(req: Request) {
 
   const { data: fixture, error: fixtureErr } = await supabase
     .from("fixtures")
-    .select("status,date_label,time,city,kickoff_at,home,away")
+    .select("status,date_label,time,city,kickoff_at,home,away,stage")
     .eq("id", fixtureId)
     .maybeSingle();
 
@@ -119,6 +135,22 @@ export async function PUT(req: Request) {
     );
   }
 
+  const isKnockout = isKnockoutStage(fixture.stage);
+  const predictedDraw90 = Math.floor(homeScore!) === Math.floor(awayScore!);
+
+  let storedEtWinner: "home" | "away" | null = null;
+  let storedPenWinner: "home" | "away" | null = null;
+
+  if (isKnockout && predictedDraw90) {
+    storedEtWinner = etWinner;
+    storedPenWinner = penWinner;
+  } else if (etWinner || penWinner) {
+    return NextResponse.json(
+      { ok: false, message: "Extra time and penalty picks are only allowed for a 90-minute draw in knockout matches." },
+      { status: 400 },
+    );
+  }
+
   const { error } = await supabase.from("predictions").upsert(
     {
       user_id: user.id,
@@ -126,6 +158,8 @@ export async function PUT(req: Request) {
       winner,
       home_score: Math.floor(homeScore!),
       away_score: Math.floor(awayScore!),
+      et_winner: storedEtWinner,
+      pen_winner: storedPenWinner,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "user_id,fixture_id" },
@@ -161,4 +195,3 @@ export async function DELETE(req: Request) {
   if (error) return NextResponse.json({ ok: false, message: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }
-

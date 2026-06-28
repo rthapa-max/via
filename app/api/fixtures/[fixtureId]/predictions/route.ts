@@ -1,7 +1,8 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getSessionCookieName, verifySession } from "@/lib/auth";
-import { predictionPoints } from "@/lib/scoring";
+import { knockoutPredictionPoints, predictionPoints } from "@/lib/scoring";
+import { isKnockoutStage } from "@/lib/teams";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 async function requireUser() {
@@ -62,7 +63,9 @@ export async function GET(_req: Request, context: RouteContext) {
 
   const { data: fixture, error: fixtureErr } = await supabase
     .from("fixtures")
-    .select("id,home,away,status,result_home_score,result_away_score")
+    .select(
+      "id,home,away,stage,status,result_home_score,result_away_score,result_went_to_extra_time,result_et_winner,result_pen_winner",
+    )
     .eq("id", fixtureId)
     .maybeSingle();
 
@@ -81,10 +84,11 @@ export async function GET(_req: Request, context: RouteContext) {
 
   const resultHome = fixture.result_home_score;
   const resultAway = fixture.result_away_score;
+  const isKnockout = isKnockoutStage(fixture.stage);
 
   const { data: predictions, error: predictionsErr } = await supabase
     .from("predictions")
-    .select("user_id,winner,home_score,away_score")
+    .select("user_id,winner,home_score,away_score,et_winner,pen_winner")
     .eq("fixture_id", fixtureId);
 
   if (predictionsErr) {
@@ -113,13 +117,24 @@ export async function GET(_req: Request, context: RouteContext) {
   const list = rows
     .map((row) => {
       const profile = usersById.get(row.user_id);
-      const points = predictionPoints(
-        row.home_score,
-        row.away_score,
-        row.winner,
-        resultHome,
-        resultAway,
-      );
+      const points = isKnockout
+        ? knockoutPredictionPoints(
+            {
+              homeScore: row.home_score,
+              awayScore: row.away_score,
+              winner: row.winner,
+              etWinner: row.et_winner,
+              penWinner: row.pen_winner,
+            },
+            {
+              resultHome,
+              resultAway,
+              wentToExtraTime: fixture.result_went_to_extra_time ?? false,
+              resultEtWinner: fixture.result_et_winner,
+              resultPenWinner: fixture.result_pen_winner,
+            },
+          )
+        : predictionPoints(row.home_score, row.away_score, row.winner, resultHome, resultAway);
       return {
         userId: row.user_id,
         displayName: profile ? userDisplay(profile) : "Unknown user",

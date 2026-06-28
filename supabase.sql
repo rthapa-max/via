@@ -52,6 +52,9 @@ create table if not exists public.fixtures (
   -- result fields (null until finished)
   result_home_score int check (result_home_score >= 0),
   result_away_score int check (result_away_score >= 0),
+  result_went_to_extra_time boolean not null default false,
+  result_et_winner text check (result_et_winner is null or result_et_winner in ('home', 'away')),
+  result_pen_winner text check (result_pen_winner is null or result_pen_winner in ('home', 'away')),
   result_status text not null default 'scheduled' check (result_status in ('scheduled','finished')),
   result_updated_at timestamptz,
   -- scheduled = not open, pending = predictions open, finished = match complete
@@ -66,6 +69,29 @@ alter table public.fixtures
 
 alter table public.fixtures
   add column if not exists prediction_close_notified_at timestamptz;
+
+alter table public.fixtures
+  add column if not exists result_went_to_extra_time boolean not null default false;
+
+alter table public.fixtures
+  add column if not exists result_et_winner text;
+
+alter table public.fixtures
+  add column if not exists result_pen_winner text;
+
+alter table public.fixtures
+  drop constraint if exists fixtures_result_et_winner_check;
+
+alter table public.fixtures
+  add constraint fixtures_result_et_winner_check
+  check (result_et_winner is null or result_et_winner in ('home', 'away'));
+
+alter table public.fixtures
+  drop constraint if exists fixtures_result_pen_winner_check;
+
+alter table public.fixtures
+  add constraint fixtures_result_pen_winner_check
+  check (result_pen_winner is null or result_pen_winner in ('home', 'away'));
 
 alter table public.fixtures
   add column if not exists status text not null default 'scheduled';
@@ -115,12 +141,34 @@ end $$;
 alter table public.predictions
   add column if not exists fixture_id text;
 
+alter table public.predictions
+  add column if not exists et_winner text;
+
+alter table public.predictions
+  add column if not exists pen_winner text;
+
+alter table public.predictions
+  drop constraint if exists predictions_et_winner_check;
+
+alter table public.predictions
+  add constraint predictions_et_winner_check
+  check (et_winner is null or et_winner in ('home', 'away'));
+
+alter table public.predictions
+  drop constraint if exists predictions_pen_winner_check;
+
+alter table public.predictions
+  add constraint predictions_pen_winner_check
+  check (pen_winner is null or pen_winner in ('home', 'away'));
+
 create table if not exists public.predictions (
   user_id uuid not null references public.app_users (id) on delete cascade,
   fixture_id text not null references public.fixtures (id) on delete cascade,
   winner text not null check (winner in ('home','away','draw')),
   home_score int not null check (home_score >= 0),
   away_score int not null check (away_score >= 0),
+  et_winner text check (et_winner is null or et_winner in ('home', 'away')),
+  pen_winner text check (pen_winner is null or pen_winner in ('home', 'away')),
   updated_at timestamptz not null default now(),
   primary key (user_id, fixture_id)
 );
@@ -161,9 +209,9 @@ end $$;
 alter table public.predictions drop column if exists match_key;
 
 -- Points:
---   exact score (draw or not) = 3
---   correct outcome, wrong score = 2
---   predicted but wrong outcome = 1
+--   Group stage (First Stage): exact = 3, correct winner = 2, participated = 1
+--   Knockout: same 90-minute rules, plus +1 for correct ET winner (draw at 90 only),
+--             +1 for correct penalty winner (draw at 90 only)
 --   no prediction = 0 (no row in predictions)
 -- Drop dependent view first (CREATE OR REPLACE cannot rename columns).
 drop view if exists public.leaderboard;
@@ -181,13 +229,39 @@ select
   f.result_away_score,
   case
     when f.status <> 'finished' then null
-    when f.result_home_score = p.home_score and f.result_away_score = p.away_score then 3
-    when (
-      (f.result_home_score > f.result_away_score and p.winner = 'home') or
-      (f.result_home_score < f.result_away_score and p.winner = 'away') or
-      (f.result_home_score = f.result_away_score and p.winner = 'draw')
-    ) then 2
-    else 1
+    else
+      (
+        case
+          when f.result_home_score = p.home_score and f.result_away_score = p.away_score then 3
+          when (
+            (f.result_home_score > f.result_away_score and p.winner = 'home') or
+            (f.result_home_score < f.result_away_score and p.winner = 'away') or
+            (f.result_home_score = f.result_away_score and p.winner = 'draw')
+          ) then 2
+          else 1
+        end
+      )
+      + case
+          when coalesce(lower(trim(f.stage)), 'first stage') <> 'first stage'
+            and p.home_score = p.away_score
+            and f.result_home_score = f.result_away_score
+            and f.result_went_to_extra_time
+            and p.et_winner is not null
+            and f.result_et_winner is not null
+            and p.et_winner = f.result_et_winner
+          then 1
+          else 0
+        end
+      + case
+          when coalesce(lower(trim(f.stage)), 'first stage') <> 'first stage'
+            and p.home_score = p.away_score
+            and f.result_home_score = f.result_away_score
+            and f.result_pen_winner is not null
+            and p.pen_winner is not null
+            and p.pen_winner = f.result_pen_winner
+          then 1
+          else 0
+        end
   end as points
 from public.predictions p
 join public.fixtures f on f.id = p.fixture_id;

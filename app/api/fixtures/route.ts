@@ -3,7 +3,7 @@ import { sortDateLabels } from "@/lib/fixtures";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 const FIXTURE_COLUMNS =
-  "id,date_label,time,home,away,stage,group,stadium,city,status,kickoff_at,result_home_score,result_away_score,result_status";
+  "id,date_label,time,home,away,stage,group,stadium,city,status,kickoff_at,result_home_score,result_away_score,result_went_to_extra_time,result_et_winner,result_pen_winner,result_status";
 
 export async function GET(req: Request) {
   let supabase;

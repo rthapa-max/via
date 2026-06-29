@@ -10,6 +10,29 @@ type LeaderRow = {
   points?: number;
 };
 
+type TabId = "knockout" | "group" | "overall";
+
+const TABS: { id: TabId; label: string; query: string; emptyMessage: string }[] = [
+  {
+    id: "knockout",
+    label: "Knockout",
+    query: "/api/leaderboard",
+    emptyMessage: "No players yet. Sign in to appear on the leaderboard.",
+  },
+  {
+    id: "group",
+    label: "Group stage",
+    query: "/api/leaderboard?stage=group",
+    emptyMessage: "No group-stage points yet.",
+  },
+  {
+    id: "overall",
+    label: "Overall",
+    query: "/api/leaderboard?stage=all",
+    emptyMessage: "No points yet.",
+  },
+];
+
 function PlayerFlag({ team }: { team: string }) {
   const flagUrl = flagUrlForTeam(team, 40);
   if (!flagUrl) return null;
@@ -45,18 +68,25 @@ function LeaderCrown() {
   );
 }
 
-export function LeaderboardTable() {
+export function LeaderboardTabs() {
+  const [activeTab, setActiveTab] = useState<TabId>("knockout");
   const [rows, setRows] = useState<LeaderRow[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const tab = TABS.find((t) => t.id === activeTab) ?? TABS[0];
+
   useEffect(() => {
+    let cancelled = false;
+
     async function load() {
       setLoading(true);
-      const res = await fetch("/api/leaderboard", { cache: "no-store" }).catch(() => null);
+      const res = await fetch(tab.query, { cache: "no-store" }).catch(() => null);
       const json = (await res?.json().catch(() => null)) as
         | { ok: true; rows: LeaderRow[] }
         | { ok: false; message: string }
         | null;
+
+      if (cancelled) return;
 
       if (!res || !json || !json.ok) {
         setRows([]);
@@ -71,25 +101,50 @@ export function LeaderboardTable() {
     void load();
     const onChange = () => void load();
     window.addEventListener("wc:predictions-changed", onChange);
-    return () => window.removeEventListener("wc:predictions-changed", onChange);
-  }, []);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("wc:predictions-changed", onChange);
+    };
+  }, [tab.query]);
 
   return (
     <section className="overflow-hidden rounded-xl border border-secondary-border bg-background shadow-sm">
-      <div className="flex items-center justify-between gap-3 border-b border-secondary-border bg-primary-600 px-5 py-4 sm:px-6">
-        <h2 className="font-semibold text-base text-primary-foreground">Leaderboard</h2>
-        <span className="text-sm text-primary-100">
-          {loading ? "Loading…" : `${rows.length} player${rows.length === 1 ? "" : "s"} · knockout only`}
-        </span>
+      <div className="border-b border-secondary-border bg-primary-600 px-5 pt-4 sm:px-6">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="font-semibold text-base text-primary-foreground">Leaderboard</h2>
+          <span className="text-sm text-primary-100">
+            {loading ? "Loading…" : `${rows.length} player${rows.length === 1 ? "" : "s"}`}
+          </span>
+        </div>
+
+        <div className="mt-3 flex gap-1" role="tablist" aria-label="Leaderboard view">
+          {TABS.map((t) => {
+            const isActive = t.id === activeTab;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => setActiveTab(t.id)}
+                className={`rounded-t-lg px-4 py-2 text-sm font-medium transition-colors ${
+                  isActive
+                    ? "bg-background text-primary-700"
+                    : "bg-primary-500/40 text-primary-50 hover:bg-primary-500/60"
+                }`}
+              >
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="p-5 sm:p-6">
         {loading ? (
           <div className="py-10 text-center text-sm text-secondary-text">Loading leaderboard…</div>
         ) : rows.length === 0 ? (
-          <div className="py-10 text-center text-sm text-secondary-text">
-            No players yet. Sign in to appear on the leaderboard.
-          </div>
+          <div className="py-10 text-center text-sm text-secondary-text">{tab.emptyMessage}</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="table-borderless w-full text-left text-sm">

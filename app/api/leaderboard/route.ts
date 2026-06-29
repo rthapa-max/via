@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isKnockoutStage } from "@/lib/teams";
+import { isGroupStage, isKnockoutStage } from "@/lib/teams";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +27,24 @@ async function fetchAllRows<T>(
   return out;
 }
 
-export async function GET() {
+function getStageFilter(param: string | null | undefined): "group" | "knockout" | "all" {
+  const value = param?.trim().toLowerCase();
+  if (value === "group") return "group";
+  if (value === "all") return "all";
+  return "knockout";
+}
+
+function fixtureMatchesStage(
+  stage: string | null | undefined,
+  filter: "group" | "knockout" | "all",
+) {
+  if (filter === "all") return true;
+  return filter === "group" ? isGroupStage(stage) : isKnockoutStage(stage);
+}
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const stageFilter = getStageFilter(searchParams.get("stage"));
   let supabase;
   try {
     supabase = getSupabaseServerClient();
@@ -59,19 +76,21 @@ export async function GET() {
       fetchAllRows<{ id: string; stage: string | null }>(supabase, "fixtures", "id,stage"),
     ]);
 
-    const knockoutFixtureIds = new Set(
-      fixtures.filter((fixture) => isKnockoutStage(fixture.stage)).map((fixture) => fixture.id),
+    const stageFixtureIds = new Set(
+      fixtures
+        .filter((fixture) => fixtureMatchesStage(fixture.stage, stageFilter))
+        .map((fixture) => fixture.id),
     );
 
     const pointsByUser = new Map<string, number>();
     for (const row of pointRows) {
-      if (row.points == null || !knockoutFixtureIds.has(row.fixture_id)) continue;
+      if (row.points == null || !stageFixtureIds.has(row.fixture_id)) continue;
       pointsByUser.set(row.user_id, (pointsByUser.get(row.user_id) ?? 0) + Number(row.points));
     }
 
     const predictionsByUser = new Map<string, number>();
     for (const row of predictionRows) {
-      if (!knockoutFixtureIds.has(row.fixture_id)) continue;
+      if (!stageFixtureIds.has(row.fixture_id)) continue;
       predictionsByUser.set(row.user_id, (predictionsByUser.get(row.user_id) ?? 0) + 1);
     }
 

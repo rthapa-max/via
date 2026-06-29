@@ -1,5 +1,5 @@
 import { TopBar } from "@/app/components/TopBar";
-import { LeaderboardTable } from "@/app/components/LeaderboardTable";
+import { LeaderboardTabs } from "@/app/components/LeaderboardTabs";
 import { ScoringGuide } from "@/app/components/ScoringGuide";
 import { FixturesFromSupabase } from "@/app/components/FixturesFromSupabase";
 import { RequireAuth } from "@/app/components/RequireAuth";
@@ -38,7 +38,7 @@ export default function Home() {
               </section>
 
               <section className="lg:col-span-5">
-                <LeaderboardTable />
+                <LeaderboardTabs />
               </section>
             </div>
           </div>

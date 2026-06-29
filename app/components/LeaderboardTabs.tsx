@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAuth } from "@/app/components/AuthProvider";
 import { flagUrlForTeam } from "@/lib/fixtures";
 
 type LeaderRow = {
+  id?: string;
   email: string;
   username?: string | null;
   favorite_team?: string | null;
@@ -54,6 +56,12 @@ function displayName(row: LeaderRow) {
   return "Player";
 }
 
+function isCurrentUser(row: LeaderRow, userId: string | undefined, userEmail: string | null | undefined) {
+  if (row.id && userId) return row.id === userId;
+  if (row.email && userEmail) return row.email.toLowerCase() === userEmail.toLowerCase();
+  return false;
+}
+
 function LeaderCrown() {
   return (
     <svg viewBox="0 0 16 16" fill="none" className="h-3.5 w-3.5 shrink-0" aria-hidden="true">
@@ -69,6 +77,7 @@ function LeaderCrown() {
 }
 
 export function LeaderboardTabs() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>("knockout");
   const [rows, setRows] = useState<LeaderRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -158,13 +167,16 @@ export function LeaderboardTabs() {
               <tbody className="divide-y divide-secondary-75 text-primary-text">
                 {rows.map((row, index) => {
                   const isLeader = index === 0;
+                  const isYou = isCurrentUser(row, user?.id, user?.email);
                   return (
                     <tr
-                      key={row.email}
+                      key={row.id ?? row.email}
                       className={
                         isLeader
                           ? "bg-gradient-to-r from-primary-50 via-primary-100/60 to-yellow-300/40"
-                          : "hover:bg-secondary-50"
+                          : isYou
+                            ? "bg-primary-50 ring-1 ring-inset ring-primary-200"
+                            : "hover:bg-secondary-50"
                       }
                     >
                       <td className="py-3.5 pl-4 pr-4 sm:pl-6">
@@ -180,10 +192,17 @@ export function LeaderboardTabs() {
                       <td className="max-w-[14rem] py-3.5 pr-4" title={row.email}>
                         <span className="inline-flex min-w-0 items-center gap-2">
                           <span
-                            className={`truncate ${isLeader ? "font-semibold text-primary-dark" : ""}`}
+                            className={`truncate ${
+                              isLeader || isYou ? "font-semibold text-primary-dark" : ""
+                            }`}
                           >
                             {displayName(row)}
                           </span>
+                          {isYou ? (
+                            <span className="shrink-0 rounded-full bg-primary-600 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-primary-foreground">
+                              You
+                            </span>
+                          ) : null}
                           {isLeader ? (
                             <span className="shrink-0 rounded-full bg-primary-600 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-primary-foreground">
                               Leader
@@ -194,7 +213,7 @@ export function LeaderboardTabs() {
                       </td>
                       <td
                         className={`py-3.5 pl-4 pr-4 text-right tabular-nums sm:pr-6 ${
-                          isLeader
+                          isLeader || isYou
                             ? "font-semibold text-primary-700"
                             : "font-semibold text-primary-text"
                         }`}

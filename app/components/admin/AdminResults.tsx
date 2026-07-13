@@ -15,6 +15,9 @@ type FixtureRow = {
   status: "scheduled" | "pending" | "finished";
   result_home_score: number | null;
   result_away_score: number | null;
+  result_went_to_extra_time?: boolean | null;
+  result_et_winner?: "home" | "away" | null;
+  result_pen_winner?: "home" | "away" | null;
 };
 
 function normalizeScore(raw: string) {
@@ -110,6 +113,7 @@ function AdminResultRow({
 }) {
   const isFinished = row.status === "finished";
   const isKnockout = isKnockoutStage(row.stage);
+  const [editingResult, setEditingResult] = useState(false);
   const [hs, setHs] = useState(row.result_home_score === null ? "" : String(row.result_home_score));
   const [as, setAs] = useState(row.result_away_score === null ? "" : String(row.result_away_score));
   const [homeTeam, setHomeTeam] = useState(row.home);
@@ -126,9 +130,28 @@ function AdminResultRow({
     setHomeTeam(row.home);
     setAwayTeam(row.away);
     setStatus(row.status === "pending" ? "pending" : "scheduled");
-    setEtWinner("");
-    setPenWinner("");
-  }, [row.away, row.home, row.id, row.result_away_score, row.result_home_score, row.status]);
+    setEtWinner(
+      row.result_went_to_extra_time && row.result_et_winner
+        ? row.result_et_winner
+        : row.result_pen_winner
+          ? "draw"
+          : "",
+    );
+    setPenWinner(row.result_pen_winner ?? "");
+    setEditingResult(false);
+  }, [
+    row.away,
+    row.home,
+    row.id,
+    row.result_away_score,
+    row.result_home_score,
+    row.result_et_winner,
+    row.result_pen_winner,
+    row.result_went_to_extra_time,
+    row.status,
+  ]);
+
+  const inputsLocked = isFinished && !editingResult;
 
   const hsNum = hs === "" ? NaN : Number(hs);
   const asNum = as === "" ? NaN : Number(as);
@@ -242,7 +265,7 @@ function AdminResultRow({
               onChange={(e) => setHs(normalizeScore(e.target.value))}
               placeholder="0"
               inputMode="numeric"
-              disabled={isFinished}
+              disabled={inputsLocked}
               className="h-8 rounded-xl border border-zinc-200 bg-white px-2 text-xs disabled:opacity-60 dark:border-white/10 dark:bg-zinc-950"
             />
             <div className="text-center text-zinc-500 dark:text-zinc-400">-</div>
@@ -251,14 +274,19 @@ function AdminResultRow({
               onChange={(e) => setAs(normalizeScore(e.target.value))}
               placeholder="0"
               inputMode="numeric"
-              disabled={isFinished}
+              disabled={inputsLocked}
               className="h-8 rounded-xl border border-zinc-200 bg-white px-2 text-xs disabled:opacity-60 dark:border-white/10 dark:bg-zinc-950"
             />
           </div>
-          {isKnockout && !isFinished ? (
+          {isKnockout && !inputsLocked ? (
             <p className="text-[11px] text-zinc-500 dark:text-zinc-400">90-minute score</p>
           ) : null}
-          {knockoutDrawInput && !isFinished ? (
+          {editingResult && isFinished ? (
+            <p className="text-[11px] text-amber-700 dark:text-amber-400">
+              Editing a finished result — everyone&apos;s points for this match will recalculate on save.
+            </p>
+          ) : null}
+          {knockoutDrawInput && !inputsLocked ? (
             <div className="max-w-xs space-y-2.5 rounded-xl border border-zinc-200 p-2.5 dark:border-white/10">
               <OutcomePicker
                 label="Extra time winner"
@@ -295,7 +323,27 @@ function AdminResultRow({
               {busy ? "Saving…" : "Save"}
             </button>
           ) : null}
-          {!isFinished ? (
+          {isFinished && !editingResult ? (
+            <button
+              type="button"
+              onClick={() => setEditingResult(true)}
+              disabled={busy}
+              className="inline-flex h-8 items-center justify-center rounded-full border border-zinc-200 bg-white px-3 text-xs text-zinc-800 hover:bg-zinc-50 disabled:opacity-60 dark:border-white/10 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-white/5"
+            >
+              Edit result
+            </button>
+          ) : null}
+          {isFinished && editingResult ? (
+            <button
+              type="button"
+              onClick={() => setEditingResult(false)}
+              disabled={busy}
+              className="inline-flex h-8 items-center justify-center rounded-full border border-zinc-200 bg-white px-3 text-xs text-zinc-800 hover:bg-zinc-50 disabled:opacity-60 dark:border-white/10 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-white/5"
+            >
+              Cancel
+            </button>
+          ) : null}
+          {!isFinished || editingResult ? (
             <button
               type="button"
               onClick={() =>
@@ -310,7 +358,7 @@ function AdminResultRow({
               disabled={busy || (knockoutDrawInput && !canCompleteKnockoutDraw)}
               className="inline-flex h-8 items-center justify-center rounded-full bg-zinc-950 px-3 text-xs text-white hover:bg-zinc-800 disabled:opacity-60 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
             >
-              {busy ? "Saving…" : "Complete"}
+              {busy ? "Saving…" : isFinished ? "Save result" : "Complete"}
             </button>
           ) : null}
         </div>

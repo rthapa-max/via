@@ -135,6 +135,7 @@ export async function GET(_req: Request, context: RouteContext) {
             },
           )
         : predictionPoints(row.home_score, row.away_score, row.winner, resultHome, resultAway);
+      const isExactMatch = row.home_score === resultHome && row.away_score === resultAway;
       return {
         userId: row.user_id,
         displayName: profile ? userDisplay(profile) : "Unknown user",
@@ -142,6 +143,7 @@ export async function GET(_req: Request, context: RouteContext) {
         homeScore: row.home_score,
         awayScore: row.away_score,
         points,
+        isExactMatch,
       };
     })
     .sort((a, b) => b.points - a.points || a.displayName.localeCompare(b.displayName));

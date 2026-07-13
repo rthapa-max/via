@@ -75,10 +75,17 @@ export function knockoutPredictionPoints(
   return points;
 }
 
-export function predictionPointsLabel(points: number) {
-  if (points >= 5) return "Exact + ET + pens";
-  if (points === 4) return "Exact + bonus";
-  if (points === 3) return "Exact score";
+/**
+ * Label is derived from isExactMatch, not just points — a non-exact prediction can also
+ * reach 3 points via correct winner (2) + ET/pen bonus (1), which must not read as "Exact score".
+ */
+export function predictionPointsLabel(points: number, isExactMatch: boolean) {
+  if (isExactMatch) {
+    if (points >= 5) return "Exact + ET + pens";
+    if (points === 4) return "Exact + bonus";
+    return "Exact score";
+  }
+  if (points === 3) return "Correct winner + bonus";
   if (points === 2) return "Correct winner";
   if (points === 1) return "Participated";
   return "No prediction";

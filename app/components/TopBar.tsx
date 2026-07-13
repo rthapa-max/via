@@ -48,6 +48,13 @@ export function TopBar() {
           <FavoriteTeamPicker />
           <PredictionHistoryButton />
 
+          <Link
+            href="/stats"
+            className="hidden h-8 items-center justify-center rounded-md border border-secondary-border bg-background px-3 text-xs font-medium text-primary-text transition-colors hover:border-primary-200 hover:bg-primary-50 sm:inline-flex"
+          >
+            Stats
+          </Link>
+
           {user?.isAdmin ? (
             <Link
               href="/admin"

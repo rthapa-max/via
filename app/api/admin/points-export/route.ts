@@ -8,6 +8,13 @@ export const revalidate = 0;
 
 const PAGE_SIZE = 1000;
 
+const SCOPES = ["overall", "knockout", "group"] as const;
+type Scope = (typeof SCOPES)[number];
+
+function parseScope(value: string | null): Scope {
+  return (SCOPES as readonly string[]).includes(value ?? "") ? (value as Scope) : "overall";
+}
+
 function csvCell(value: string | number | null | undefined) {
   const s = value == null ? "" : String(value);
   if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
@@ -34,11 +41,13 @@ async function fetchAllRows<T>(
   return out;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const admin = await requireAdmin();
   if (!admin) {
     return NextResponse.json({ ok: false, message: "Unauthorized" }, { status: 401 });
   }
+
+  const scope = parseScope(new URL(request.url).searchParams.get("scope"));
 
   let supabase;
   try {
@@ -71,7 +80,10 @@ export async function GET() {
 
     const pointsByUser = new Map<string, number>();
     for (const row of pointRows) {
-      if (row.points == null || !knockoutFixtureIds.has(row.fixture_id)) continue;
+      if (row.points == null) continue;
+      const isKnockout = knockoutFixtureIds.has(row.fixture_id);
+      if (scope === "knockout" && !isKnockout) continue;
+      if (scope === "group" && isKnockout) continue;
       pointsByUser.set(row.user_id, (pointsByUser.get(row.user_id) ?? 0) + Number(row.points));
     }
 
@@ -93,12 +105,13 @@ export async function GET() {
     ];
     const csv = `\uFEFF${lines.join("\r\n")}\r\n`;
     const date = new Date().toISOString().slice(0, 10);
+    const scopeLabel = scope === "knockout" ? "knockout" : scope === "group" ? "group-stage" : "overall";
 
     return new NextResponse(csv, {
       status: 200,
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="prediction-points-${date}.csv"`,
+        "Content-Disposition": `attachment; filename="prediction-points-${scopeLabel}-${date}.csv"`,
         "Cache-Control": "no-store",
       },
     });

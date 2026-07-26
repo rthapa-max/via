@@ -55,6 +55,13 @@ export function TopBar() {
             Stats
           </Link>
 
+          <Link
+            href="/rules"
+            className="hidden h-8 items-center justify-center rounded-md border border-secondary-border bg-background px-3 text-xs font-medium text-primary-text transition-colors hover:border-primary-200 hover:bg-primary-50 sm:inline-flex"
+          >
+            Rules
+          </Link>
+
           {user?.isAdmin ? (
             <Link
               href="/admin"

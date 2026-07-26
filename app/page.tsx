@@ -9,7 +9,12 @@ export default function Home() {
     <RequireAuth>
       <div className="min-h-screen bg-secondary-25 font-sans text-primary-text">
         <TopBar />
-        <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-8 sm:py-10 lg:px-10">
+
+        <div className="w-full px-4 pt-8 sm:px-8 sm:pt-10 lg:px-10">
+          <PrizePool />
+        </div>
+
+        <main className="mx-auto w-full max-w-6xl px-4 pb-8 pt-8 sm:px-8 sm:pb-10 sm:pt-10 lg:px-10">
           {/* <div className="mb-8 sm:mb-10">
             <h1 className="font-semibold text-2xl tracking-tight sm:text-3xl">World Cup 2026</h1>
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-secondary-text sm:text-base">
@@ -18,8 +23,6 @@ export default function Home() {
           </div> */}
 
           <div className="space-y-8 sm:space-y-10">
-            <PrizePool />
-
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:gap-8 lg:items-start">
               <section className="lg:col-span-7">
                 <div className="mb-5 sm:mb-6">
